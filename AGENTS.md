@@ -34,11 +34,15 @@ That includes, without limitation:
 
 - commit messages and trailers (`Co-authored-by`, `Signed-off-by` for an agent, `Made-with`, generator stamps)
 - pull/merge request titles, descriptions, comments, reviews, and labels
+- vendor CTAs and badges in PR/MR descriptions, including **Open in Cursor**, **Open in Web**, and any equivalent “open this agent run” buttons or images
+- hidden wrappers and footers tooling injects (for example `<!-- CURSOR_AGENT_PR_BODY_* -->`, `cursor.com/agents/…` links, run ids)
 - branch names, prefixes, suffixes, and remote names (`cursor/`, `agent/`, `copilot/`, run ids, model names)
 - code comments, docstrings, changelog entries, and file headers
 - NDR metadata (deciders, authors, or tools)
 
 Write as a contributor to the repository. Do not mention that an agent drafted, reviewed, or generated the work.
+
+Platforms and PR helpers often append this attribution after the description is written. After every PR/MR create or update, read the stored description and delete any injected agent markup, buttons, badges, or links so the published body is only the human description.
 
 ## Nether Decision Records
 
