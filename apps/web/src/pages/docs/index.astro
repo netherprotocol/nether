@@ -1,0 +1,40 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { displayTitle, docIdToSlug, groupDocs } from '../../lib/docs';
+import { SITE_DESCRIPTION, withBase } from '../../lib/site';
+
+const entries = await getCollection('docs');
+const groups = groupDocs(entries);
+
+function hrefFor(id: string): string {
+  const slug = docIdToSlug(id);
+  return slug ? withBase(`docs/${slug}`) : withBase('docs');
+}
+---
+
+<Layout title="Documentation — Nether" description={SITE_DESCRIPTION}>
+  <main class="mx-auto w-full max-w-3xl px-6 py-12 md:px-10 md:py-16">
+    <h1 class="font-display text-4xl text-white md:text-5xl">Documentation</h1>
+    <p class="mt-3 max-w-lg text-sm leading-relaxed text-muted">
+      Protocol specification, Nether Decision Records, and implementation plans, rendered as they
+      appear in the repository.
+    </p>
+    {
+      groups.map((group) => (
+        <section class="mt-12 border-t border-paper/10 pt-8">
+          <h2 class="text-[0.7rem] tracking-[0.22em] text-muted uppercase">{group.label}</h2>
+          <ul class="mt-4 space-y-2">
+            {group.entries.map((entry) => (
+              <li>
+                <a class="text-paper hover:text-white" href={hrefFor(entry.id)}>
+                  {displayTitle(entry.id, entry.body)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </main>
+</Layout>
