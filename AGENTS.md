@@ -8,7 +8,8 @@ Update this document when the user asks, or when the user enforces or recommends
 
 1. Follow existing documentation. Do not invent protocol behavior, economics, or process that contradicts it.
 2. The primary specification is [`docs/protocol_spec.md`](docs/protocol_spec.md). Treat sections 1–21 as requirements, not suggestions. Section 22 lists what an implementation agent may and must not change.
-3. Document **new** decisions in immutable [Nether Decision Records (NDRs)](docs/ndr/README.md). Do not silently overwrite prior decisions.
+3. Sequence implementation from living [Nether Implementation Plans (NIPs)](docs/nip/README.md). NIPs are engineering plans, not protocol rules. The spec wins if they disagree.
+4. Document **new** decisions in immutable [Nether Decision Records (NDRs)](docs/ndr/README.md). Do not silently overwrite prior decisions.
 
 If documentation and code disagree, stop and ask the user which one is authoritative before “fixing” either.
 
@@ -48,7 +49,7 @@ Platforms and PR helpers often append this attribution after the description is 
 
 When a decision is not already settled by existing docs:
 
-1. Search [`docs/ndr/`](docs/ndr/) and the protocol spec before opening a new NDR.
+1. Search [`docs/ndr/`](docs/ndr/), [`docs/nip/`](docs/nip/), and the protocol spec before opening a new NDR.
 2. Copy [`docs/ndr/template.md`](docs/ndr/template.md) to `docs/ndr/NNNN-short-title.md` (next free four-digit number).
 3. Record **all** considered options, the decision drivers, the chosen option, and **why** it was chosen.
 4. Treat accepted NDRs as immutable. Do not edit the decision body later. Supersede with a new NDR if the decision must change.
