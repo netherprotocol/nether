@@ -299,7 +299,7 @@ An auction snapshots:
 
 Only one active Reaper auction exists at a time.
 
-If the minimum budget is not reached, yield accumulates.
+Until an auction is started, harvested yield remains in `availableReaperETH`.
 
 Unspent ETH from an expired auction rolls into the Reaper's available balance and can fund the next auction.
 
@@ -440,7 +440,7 @@ The following are immutable after deployment:
 - Reaper 7-day duration;
 - Reaper 2.00 start multiplier;
 - Reaper 1.05 end multiplier;
-- Reaper minimum-budget formula;
+- no Reaper minimum budget (any positive available Reaper ETH);
 - 100% Reaper burn rule;
 - 100% harvestable-yield allocation to Reaper;
 - protected-principal semantics.
@@ -738,7 +738,7 @@ Required test classes:
 - Reaper rate at start, midpoint, end, and after expiration;
 - full and partial Reaper fills;
 - rollover;
-- minimum auction budget;
+- auction start with any positive available Reaper ETH (no minimum budget);
 - strategy scheduling and 14-day delay.
 
 ### Fuzz/property tests
