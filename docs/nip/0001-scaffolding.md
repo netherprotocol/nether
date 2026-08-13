@@ -63,7 +63,7 @@ There is **no** root `package.json`, `pnpm-workspace.yaml`, or `requirements.txt
 | Tree | Runtime | First workstream | Stack now |
 |---|---|---|---|
 | `contracts/` | Foundry / solc | W0 | This NIP + Proposed NDR-0002 |
-| `apps/web/` | JavaScript/TypeScript (expected) | W7 | Proposed [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
+| `apps/web/` | JavaScript/TypeScript (expected) | W7 | [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
 | `apps/keeper/` | Own runtime | W8 | TBD; NDR when chosen |
 | `docs/` | Markdown | ongoing | — |
 
@@ -257,7 +257,7 @@ W0 is done when:
 Leave these to later NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 
 - Accepting the compiler / OZ / Foundry freeze (NDR-0002)
-- Accepting the frontend freeze (NDR-0003); indexer remains TBD (W8)
+- Frontend freeze (NDR-0003, Accepted); indexer remains TBD (W8)
 - Gravekeeper language and runtime
 - Initial production strategy (AAVE candidate)
 - Any `IStrategyAdapter` surface change

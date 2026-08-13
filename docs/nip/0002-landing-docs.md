@@ -1,14 +1,14 @@
 # NIP-0002: Landing site and documentation
 
-- Status: Ready to implement (do not start until explicitly requested)
+- Status: Implemented
 - Date: 2026-08-13
 - Workstream: W7 (landing slice only)
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
-- Stack: Proposed [`NDR-0003`](../ndr/0003-frontend-stack.md) (not accepted)
+- Stack: [`NDR-0003`](../ndr/0003-frontend-stack.md) (Accepted)
 - Visual reference: attached **The SOL Grave** landing screenshot (holder) and dashboard screenshot (later monitoring, not this slice)
 
-This plan is the first public frontend slice: a two-page static site. It does not implement bury/Reaper/wallet UI, does not read chain state, and does not freeze the frontend stack. Those versions freeze when NDR-0003 is accepted.
+This plan is the first public frontend slice: a two-page static site. It does not implement bury/Reaper/wallet UI and does not read chain state. The frontend stack is frozen by NDR-0003.
 
 ## 1. Purpose
 
@@ -20,7 +20,7 @@ Unblock later W7 app work (Grave dashboard, bury, Reaper) on the same Astro tree
 
 In scope:
 
-- Scaffold `apps/web/` as an Astro static site using Proposed NDR-0003 versions
+- Scaffold `apps/web/` as an Astro static site using NDR-0003 versions
 - Two product pages: holder (`/`) and Documentation (`/docs` and per-file routes)
 - Visual copy of the SOL Grave holder (layout, type contrast, color, chrome)
 - Spec-accurate Nether copy (not SOL Grave economics)
@@ -37,7 +37,6 @@ Out of scope:
 - Keepers page
 - Indexer, The Graph, Ponder, or event ingestion
 - Custom domain
-- Accepting NDR-0003
 - Changing protocol copy in `docs/protocol_spec.md`
 
 ## 3. Information architecture
@@ -220,7 +219,7 @@ Do not run `forge` from this workflow. Deploy job is optional and off until aske
 
 Do not run these until this NIP is explicitly started.
 
-1. Replace the `apps/web/` stub with an Astro 7 static project at the Proposed NDR-0003 versions.
+1. Replace the `apps/web/` stub with an Astro 7 static project at the NDR-0003 versions.
 2. Tailwind 4 + self-hosted display/sans fonts; global dark styles matching §4.
 3. Shared header layout (brand, DOCUMENTATION, reserved right slot).
 4. Holder page copy and CTAs from §5.
@@ -236,19 +235,18 @@ SPDX / license on web files: none required beyond `package.json` `"private": tru
 
 This slice is done when:
 
-- `apps/web` builds static HTML with Proposed NDR-0003 versions
+- `apps/web` builds static HTML with NDR-0003 versions
 - `/` matches the SOL Grave holder layout with Nether naming and the §5 paragraph
 - `/docs` and each `docs/**/*.md` file are reachable and readable, including GFM tables
 - Adding a new `docs/nip/*.md` shows up after rebuild with no web source change
 - Crawlers can see holder and spec text in static HTML
 - No wallet, RPC, indexer, or bury UI is present
-- NDR-0003 is still Proposed unless it is explicitly accepted in a later change
+- NDR-0003 is Accepted
 
 ## 12. Not decided here
 
 Leave these to later NDRs / NIPs:
 
-- Accepting the frontend freeze (NDR-0003)
 - Indexer (W8)
 - Gravekeeper language (W8)
 - Bury / Reaper / Grave dashboard application screens (later W7 NIP)

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rastsislaux.github.io/nether/sitemap-index.xml

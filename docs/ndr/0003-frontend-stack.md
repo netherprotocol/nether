@@ -1,11 +1,11 @@
 # NDR-0003: Frontend stack
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-13
 - Supersedes: (none)
 - Superseded by: (none)
 
-This record is a **draft**. It is not accepted and does not freeze production frontend bytecode or hosting. [`NIP-0002`](../nip/0002-landing-docs.md) may install these versions as the working set for the landing and documentation site. Acceptance locks the table; a later framework, output-mode, or host change requires a new NDR.
+This record is **accepted**. The freeze table is locked. A later framework, output-mode, or host change requires a new NDR.
 
 Indexer technology is **out of scope**. Live protocol reads for a later dashboard use on-chain views (spec §12), not an indexer. An indexer NDR remains queued for W8 if historical analytics need one.
 
@@ -65,17 +65,18 @@ Chosen option: **Option C**, because it is the only option that hits indexabilit
 - Option B is the right tool for an authenticated product, not a two-page static holder plus Markdown. It also pulls toward a Node host.
 - Option D/E/F optimize for a docs portal. Nether’s first page is a branded holder; docs are the second route, styled to match the holder, not the other way around.
 
-Proposed freeze table (as of 2026-08-13):
+Freeze table (as of 2026-08-13):
 
 | Component | Version / choice | Source |
 |---|---|---|
 | Site generator | Astro `7.2.2` | [npm `astro`](https://www.npmjs.com/package/astro) |
 | Output | `static` (`output: 'static'`) | HTML/CSS (and only opted-in JS) in `apps/web/dist/` |
-| Language | TypeScript `5.x` (working: `7.0.2`) | `apps/web/tsconfig.json`, strict |
+| Language | TypeScript `5.9.3` | `apps/web/tsconfig.json`, strict; `@astrojs/check` does not accept TypeScript 7 |
 | Node | `22` LTS | Matches current 22.x; do not require 24 |
 | Package manager | npm (`package-lock.json` in `apps/web/`) | No root `package.json`, no pnpm workspace |
 | CSS | Tailwind CSS `4.3.3` via `@tailwindcss/vite` | Utility styling for the reference UI |
 | Sitemap | `@astrojs/sitemap` `3.7.3` | Build-time sitemap |
+| Markdown processor | `@astrojs/markdown-remark` `7.2.2` (`unified`) | GFM tables and in-repo `.md` link rewrite |
 | Docs input | Repo `docs/**/*.md` via Astro content `glob` loader | Do not duplicate Markdown under `src/content/` |
 | Host | GitHub Pages (Actions) | Free static host; this repo is already on GitHub |
 | `site` / `base` | Configurable; default project URL `https://rastsislaux.github.io/nether/` with `base: '/nether/'` until a custom domain is named | GitHub Pages project site |
@@ -86,9 +87,9 @@ Not in this freeze: indexer, Gravekeeper, wallet libraries, RPC providers, custo
 
 ## Consequences
 
-- [`NIP-0002`](../nip/0002-landing-docs.md) scaffolds `apps/web/` with this working set. Do not start that NIP until asked.
+- [`NIP-0002`](../nip/0002-landing-docs.md) scaffolds `apps/web/` with this frozen set.
 - CI for the web tree is a separate GitHub Actions workflow from `contracts.yml`. It typechecks and builds; deploy to Pages may wait until the landing slice is accepted to go live.
 - Adding React (or another official Astro integration) and `viem` for a dashboard does **not** require a new NDR if `apps/web/` remains static and isolated. Switching to SSR, a Node host, a second frontend app, or an indexer **does**.
 - Indexer technology stays queued for W8. Do not introduce The Graph, Ponder, or a custom event indexer in the landing slice.
 - Visual implementation follows [`NIP-0002`](../nip/0002-landing-docs.md) and the attached SOL Grave screenshots. Public copy follows spec §1 and §14, not the reference’s Reaper payout sentence.
-- Accepting this NDR is a gate for treating the table as frozen, not a gate for writing NIP-0002.
+- A bump to Astro, Tailwind, Node, output mode, or host is a new NDR.

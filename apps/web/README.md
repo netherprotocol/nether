@@ -1,7 +1,13 @@
 # apps/web
 
-Landing site and project dashboard (W7). Own frontend environment, separate from `contracts/` and `apps/keeper/`.
+Landing site and documentation ([`NIP-0002`](../../docs/nip/0002-landing-docs.md)). Stack: [`NDR-0003`](../../docs/ndr/0003-frontend-stack.md).
 
-Frontend stack: Proposed [`NDR-0003`](../../docs/ndr/0003-frontend-stack.md). First slice: [`NIP-0002`](../../docs/nip/0002-landing-docs.md) (holder + `docs/**`). Do not scaffold the Astro tree until that NIP is explicitly started.
+```
+npm ci
+npm run dev
+npm run build
+```
 
-Indexer technology is not chosen. Live protocol reads for a later dashboard use spec §12 views, not an indexer.
+Commands run from `apps/web/`. The site is static HTML with `base: /nether/` for GitHub Pages. Documentation is built from repo `docs/**`; do not copy Markdown into this tree.
+
+Live protocol reads, wallet UI, and GitHub Pages deploy are out of this slice.

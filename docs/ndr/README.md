@@ -38,4 +38,4 @@ docs/ndr/
 |---|---|---|
 | [0001](0001-adopt-immutable-ndrs.md) | Adopt immutable Nether Decision Records | Accepted |
 | [0002](0002-toolchain-version-freeze.md) | Toolchain version freeze | Proposed |
-| [0003](0003-frontend-stack.md) | Frontend stack | Proposed |
+| [0003](0003-frontend-stack.md) | Frontend stack | Accepted |
