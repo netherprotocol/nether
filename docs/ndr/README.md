@@ -6,7 +6,9 @@ NDRs are immutable records of design decisions for Nether. They exist so agents 
 
 Write an NDR when the work requires a choice that is **not** already settled by [`docs/protocol_spec.md`](../protocol_spec.md) or an existing NDR, and the choice will constrain later work.
 
-Examples: contract boundaries, strategy adapter selection, testing standards, upgrade/ops policy, public APIs, repo conventions that are not obvious from the spec.
+Examples: contract boundaries, strategy adapter selection, testing standards, upgrade/ops policy, public APIs, toolchain version freeze, repo conventions that are not obvious from the spec.
+
+Living engineering sequence lives in [NIPs](../nip/README.md), not here.
 
 Do not write an NDR for restoring behavior the spec already requires, or for purely mechanical edits.
 
@@ -35,3 +37,4 @@ docs/ndr/
 | NDR | Title | Status |
 |---|---|---|
 | [0001](0001-adopt-immutable-ndrs.md) | Adopt immutable Nether Decision Records | Accepted |
+| [0002](0002-toolchain-version-freeze.md) | Toolchain version freeze | Proposed |
