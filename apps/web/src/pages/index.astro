@@ -1,34 +1,106 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { HOLDER_COPY, SITE_DESCRIPTION, SITE_TITLE, withBase } from '../lib/site';
+import ShardMark from '../components/ShardMark.astro';
+import FeatureIcon from '../components/FeatureIcons.astro';
+import {
+  APP_LATER_TITLE,
+  FEATURES,
+  HOLDER_COPY,
+  HOLDER_KICKER,
+  PRIMARY_CTA,
+  SECONDARY_CTA,
+  SITE_DESCRIPTION,
+  SITE_TITLE,
+  STATS,
+  withBase,
+} from '../lib/site';
 
 const docsHref = withBase('docs');
 ---
 
-<Layout title={SITE_TITLE} description={SITE_DESCRIPTION}>
-  <main class="flex min-h-[calc(100svh-4.5rem)] flex-col justify-end px-6 pb-16 md:px-16 md:pb-24">
-    <div class="max-w-xl">
-      <h1 class="font-display text-6xl text-white md:text-7xl">{SITE_TITLE}</h1>
-      <p class="mt-5 max-w-md text-[0.95rem] leading-relaxed font-light text-paper">
-        {HOLDER_COPY}
-      </p>
-      <div class="mt-8 flex flex-wrap gap-3">
+<Layout title={SITE_TITLE} description={SITE_DESCRIPTION} surface="holder">
+  <main class="flex min-h-[calc(100svh-4.5rem)] flex-col">
+    <section
+      class="relative grid flex-1 items-center gap-10 px-6 pt-6 pb-10 md:grid-cols-[minmax(0,1fr)_minmax(16rem,28rem)] md:gap-8 md:px-16 md:pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,34rem)]"
+    >
+      <div class="relative z-10 max-w-xl">
+        <h1 class="font-display text-[4.25rem] leading-none text-white md:text-8xl">{SITE_TITLE}</h1>
+        <p
+          class="mt-5 text-[0.72rem] font-medium tracking-[0.28em] text-accent uppercase md:text-[0.78rem]"
+        >
+          {HOLDER_KICKER}
+        </p>
+        <p class="mt-4 max-w-md text-[0.92rem] leading-relaxed font-light text-paper">
+          {HOLDER_COPY}
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title={APP_LATER_TITLE}
+            class="bg-accent cursor-not-allowed px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase"
+          >
+            {PRIMARY_CTA}
+          </button>
+          <a
+            href={docsHref}
+            class="border border-white/85 px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase"
+          >
+            {SECONDARY_CTA}
+          </a>
+        </div>
+      </div>
+      <div class="relative mx-auto w-full max-w-md md:max-w-none">
+        <div
+          class="pointer-events-none absolute inset-x-[8%] top-[18%] bottom-[10%] rounded-full bg-[radial-gradient(ellipse_at_bottom,rgb(196_120_80_/_0.42),transparent_68%)]"
+        >
+        </div>
+        <ShardMark />
+      </div>
+    </section>
+
+    <section
+      class="grid gap-10 px-6 py-8 md:grid-cols-4 md:gap-8 md:px-16 md:py-6"
+      aria-label="Protocol principles"
+    >
+      {
+        FEATURES.map((feature) => (
+          <article>
+            <FeatureIcon name={feature.icon} />
+            <h2 class="mt-4 text-[0.7rem] tracking-[0.22em] text-accent uppercase">{feature.title}</h2>
+            <p class="mt-2 max-w-xs text-[0.82rem] leading-relaxed font-light text-paper/90">
+              {feature.body}
+            </p>
+          </article>
+        ))
+      }
+    </section>
+
+    <section
+      class="mt-auto flex flex-col border-t border-white/10 bg-[#0b0b0b] md:flex-row md:items-stretch"
+      aria-label="Protocol facts"
+    >
+      {
+        STATS.map((stat) => (
+          <div class="flex-1 border-b border-white/10 px-5 py-4 md:border-r md:border-b-0 md:px-8 md:py-5">
+            <p class="text-[0.62rem] tracking-[0.22em] text-accent uppercase">{stat.label}</p>
+            <p class="mt-1.5 text-sm font-light text-white md:text-[0.95rem]">{stat.value}</p>
+          </div>
+        ))
+      }
+      <div class="flex items-center justify-end px-5 py-3 md:px-6">
         <button
           type="button"
           disabled
           aria-disabled="true"
-          title="The app ships in a later W7 NIP"
-          class="bg-accent cursor-not-allowed px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase disabled:opacity-100"
+          title={APP_LATER_TITLE}
+          class="inline-flex cursor-not-allowed items-center gap-3 border border-white/12 bg-[#141414] px-4 py-2.5 text-sm text-white"
         >
-          Enter the Grave
+          0 $NETH
+          <span aria-hidden="true" class="text-white/70">→</span>
         </button>
-        <a
-          href={docsHref}
-          class="border border-accent px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase"
-        >
-          Documentation
-        </a>
       </div>
-    </div>
+    </section>
   </main>
 </Layout>

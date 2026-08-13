@@ -6,9 +6,10 @@ import Header from '../components/Header.astro';
 interface Props {
   title: string;
   description: string;
+  surface?: 'holder' | 'docs';
 }
 
-const { title, description } = Astro.props;
+const { title, description, surface = 'docs' } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -27,7 +28,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <Font cssVariable="--font-cormorant" preload />
     <Font cssVariable="--font-inter" preload />
   </head>
-  <body class="site-glow min-h-svh antialiased">
+  <body class:list={[surface === 'holder' ? 'holder-page' : 'site-glow', 'min-h-svh antialiased']}>
     <Header />
     <slot />
   </body>

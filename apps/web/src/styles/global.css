@@ -3,8 +3,8 @@
 @theme inline {
   --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --color-accent: #7a4035;
-  --color-accent-glow: rgb(122 64 53 / 0.38);
+  --color-accent: #a05a40;
+  --color-accent-glow: rgb(160 90 64 / 0.42);
   --color-paper: #f4efe6;
   --color-muted: rgb(244 239 230 / 0.72);
 }
@@ -25,6 +25,46 @@ body {
   background:
     radial-gradient(ellipse 70% 55% at 72% 48%, var(--color-accent-glow), transparent 62%),
     #000;
+}
+
+.holder-page {
+  background:
+    radial-gradient(ellipse 48% 42% at 78% 38%, rgb(160 90 64 / 0.22), transparent 64%),
+    #000;
+}
+
+.shard-stage {
+  position: relative;
+  width: 100%;
+}
+
+.shard-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.shard-pulse {
+  transform-origin: 260px 560px;
+  animation: shard-pulse 4.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shard-pulse {
+    animation: none;
+  }
+}
+
+@keyframes shard-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
 }
 
 .doc-body {
