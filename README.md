@@ -2,7 +2,7 @@
 
 Permanently capitalized monetary protocol on Base. Users bury ETH in the Grave and receive NETH. Yield funds the Reaper, which buys and burns NETH.
 
-Spec: [`docs/protocol_spec.md`](docs/protocol_spec.md). Plans: [`docs/nip/`](docs/nip/README.md).
+Spec: [`docs/protocol_spec.md`](docs/protocol_spec.md). Plans: [`docs/nip/`](docs/nip/README.md). Site: [rastsislaux.github.io/nether](https://rastsislaux.github.io/nether/).
 
 ```
 contracts/     Solidity (Foundry)

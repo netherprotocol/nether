@@ -27,7 +27,7 @@ In scope:
 - Build-time render of every Markdown file under repo `docs/`
 - SEO basics: titles, description, canonical, Open Graph, `robots.txt`, sitemap
 - Isolated npm manifest, ignore rules already reserved by NIP-0001, and a web CI workflow
-- GitHub Pages deploy config (`site` / `base`), ready to enable when asked
+- GitHub Pages deploy from Actions on `master` (`withastro/action` `path: apps/web`)
 
 Out of scope:
 
@@ -165,7 +165,7 @@ Minimum:
 - `@astrojs/sitemap`
 - Semantic landmarks (`header`, `main`, `nav`)
 
-Host: GitHub Pages via Actions, `apps/web` as the Astro project path (`withastro/action` `path: apps/web`). Default branch for this repo is `master`.
+Host: GitHub Pages via Actions, `apps/web` as the Astro project path (`withastro/action` `path: apps/web`). Default branch for this repo is `master`. Deploy runs on push to `master` and on `workflow_dispatch` from `master`. Pull requests build and upload the Pages artifact but do not publish.
 
 Until a custom domain exists:
 
@@ -175,8 +175,6 @@ base: '/nether/',
 ```
 
 Internal links must respect `base` (Astro `<a href={import.meta.env.BASE_URL + 'docs/'}>` or equivalent). A later custom domain drops `base` and updates `site`; that is config, not a new NDR.
-
-Do not enable the Pages deploy job until asked. CI in this NIP still **builds** on PR so the site cannot rot.
 
 ## 8. Tree
 
@@ -208,12 +206,10 @@ No root `package.json`. No React, `viem`, or wallet packages in this slice.
 
 Add `.github/workflows/web.yml` (separate from `contracts.yml`):
 
-- `working-directory: apps/web`
-- Node 22
-- `npm ci`
-- `npm run build` (Astro typecheck can be part of `build` or a separate `astro check`)
+- Pull requests: `ci` job (`npm ci` and `npm run build`, Node 22)
+- `master` push and `workflow_dispatch`: `withastro/action@v6` with `path: apps/web` and `node-version: '22'`, then `actions/deploy-pages@v5`
 
-Do not run `forge` from this workflow. Deploy job is optional and off until asked.
+Do not run `forge` from this workflow.
 
 ## 10. Implementation steps
 
@@ -226,7 +222,7 @@ Do not run these until this NIP is explicitly started.
 5. Content collection over `../../docs/**/*.md`; `[...slug]` routes; `/docs` tree.
 6. Link rewriting so spec/NDR/NIP cross-links work on the site.
 7. Sitemap, robots, meta tags; `site` / `base` for GitHub Pages.
-8. `web.yml` build on PR.
+8. `web.yml` build on PR; deploy from `master`.
 9. Confirm `npm run build` emits real HTML for `/` and a spec page (grep the heading in `dist/`, not only in the JS bundle).
 
 SPDX / license on web files: none required beyond `package.json` `"private": true` unless a later docs change says otherwise.
