@@ -5,6 +5,7 @@
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Decision log: [`ndr/README.md`](../ndr/README.md)
 - Scaffolding: [`0001-scaffolding.md`](0001-scaffolding.md)
+- Landing (do not start until requested): [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
 
@@ -35,7 +36,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 | 4 | Reaper reverse Dutch auction | **W3** | Independent of the first production adapter |
 | 5 | Investment interface, yield to Reaper, strategy governance | **W4** | Harvest, pause, timelock, **test invest adapter** |
 | 6 | AAVE pool for MVP | **W5** | Most probable; specific choice TBD with NDR |
-| 7 | Landing site and dashboard | **W7** | Two surfaces, one workstream; FE/indexer stack TBD when required |
+| 7 | Landing site and dashboard | **W7** | Two surfaces, one workstream; FE stack Proposed [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
 | 8 | Grave Keeper (cranker) bot | **W8** | Pair with observability |
 | 9 | Aerodrome market (optional) | **W9** | After M2; outside the trust boundary |
 | — | *(not in the starting layout)* | **W6** | Deployment / Sepolia / mainnet kit (§18) |
@@ -142,9 +143,11 @@ Two surfaces in one workstream, one frontend environment under `apps/web/`:
 - **Landing:** what Nether is, irreversible burial, no redemption, no promised peg
 - **App:** bury, quote, era state, Grave NAV, Reaper auction, warnings
 
-Frontend framework and indexer technology are TBD when W7/W8 require a choice. Record that choice as an NDR then; do not pick a stack in this plan.
+Frontend stack is Proposed in [`NDR-0003`](../ndr/0003-frontend-stack.md) (Astro static HTML, GitHub Pages, Tailwind). First public slice is [`NIP-0002`](0002-landing-docs.md): holder + Documentation from `docs/**`. Do not start that NIP until requested. Bury/Reaper/dashboard screens are a later W7 NIP on the same tree.
 
-W7 can start against the §12 view surface once W2/W3 exist; it should not block M0 contract tests.
+Indexer technology is still TBD at W8. Live dashboard numbers are expected to read spec §12 views via `viem` islands, not an indexer.
+
+W7 landing can start before contracts exist. The app surface can start against the §12 view surface once W2/W3 exist. Frontend must not block M0 contract tests.
 
 ### W8 — Grave Keeper and observability
 
@@ -160,7 +163,7 @@ The keeper lives under `apps/keeper/` with its own environment. Language and run
 
 Observability (§19) belongs with this workstream: issuance and burn history, NAV, harvests, auctions, strategy address changes, and alerts (NAV below principal, pause, role changes, harvest failures, migration schedule). M3 is the production hardening of this surface.
 
-Indexer technology is TBD with W7 when required.
+Indexer technology is still TBD; record it in an NDR when W8 needs one. Do not couple it to NDR-0003.
 
 ### W9 — Optional Aerodrome market
 
@@ -202,7 +205,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | Reckoning | The era-change event: `EraCompleted` when an era fills (including mid-`bury()` boundary crossings). Not NAV, harvest, or Reaper settlement. |
 | Initial strategy | AAVE is the most probable MVP adapter. Specific deployment/pool/NAV details TBD in an NDR before W5 code. |
 | Reaper minimum budget | None. Leftover pre-1.0 wording in the spec was cleaned to match §21. |
-| Frontend / indexer stack | TBD when W7/W8 require a choice; then an NDR. |
+| Frontend stack | Proposed in [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md). Indexer still TBD (W8). |
 | Keeper language / runtime | TBD when W8 requires a choice; then an NDR. |
 | Repo layout | Isolated `contracts/`, `apps/web/`, and `apps/keeper/` trees. See [`NIP-0001`](0001-scaffolding.md). |
 | Toolchain versions | Proposed in [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md); not frozen until that NDR is accepted. |
@@ -225,7 +228,8 @@ Do not accept these until the question is actually being decided. A Proposed rec
 | Compiler / OZ / Foundry version freeze | M2 (can wait until late M0) | Spec §18.3. Draft: [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (Proposed) |
 | `IStrategyAdapter` surface change, if any | W4 | Only if the spec interface is insufficient |
 | Initial production strategy (AAVE candidate) | W5 | Required; AAVE is probable, not accepted |
-| Frontend framework and indexer | W7 / W8 | When a stack must be chosen |
+| Frontend framework | W7 landing | Draft: [`NDR-0003`](../ndr/0003-frontend-stack.md) (Proposed). Plan: [`NIP-0002`](0002-landing-docs.md) |
+| Indexer | W8 | Still TBD; live views can use §12 + RPC without one |
 | Keeper language / runtime | W8 | When a stack must be chosen |
 | Any Aerodrome/LP design | W9 | Must not touch v1 monetary contracts |
 
@@ -244,7 +248,7 @@ W0 scaffold
 
 M0 gate: W1–W5 tests, invariants, economic sim, Base fork tests
  ├─ W6 Sepolia deploy kit
- ├─ W7 frontend (can start after W2/W3 views exist; stack TBD then)
+ ├─ W7 frontend (holder/docs: [`NIP-0002`](0002-landing-docs.md), do not start until requested; app screens after W2/W3 views)
  └─ W8 keeper + indexing (can start after harvest/auction exist)
 
 M1: Sepolia + frontend
@@ -255,7 +259,7 @@ M4: W9 optional
 M5: further adapters
 ```
 
-W3 should not wait for AAVE. W7 should not wait for W5. M2 should wait for W5, audit, and the cost script.
+W3 should not wait for AAVE. W7 holder/docs ([`NIP-0002`](0002-landing-docs.md)) should not wait for contracts. W7 app screens should not wait for W5. M2 should wait for W5, audit, and the cost script.
 
 ## 8. Explicit non-goals for v1
 

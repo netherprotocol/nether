@@ -13,7 +13,7 @@ This record is a **draft**. It is not accepted and does not freeze production by
 
 The spec does not name patch versions. [`NIP-0000`](../nip/0000-the-roadmap.md) says W0 may pick working versions and that the freeze is an NDR, not an implicit scaffold decision.
 
-This NDR names the versions to freeze. Frontend, indexer, and Gravekeeper stacks are out of scope (separate NDRs at W7/W8).
+This NDR names the versions to freeze. Frontend, indexer, and Gravekeeper stacks are out of scope (frontend draft: [`NDR-0003`](0003-frontend-stack.md); indexer and keeper remain later NDRs).
 
 ## Decision drivers
 
@@ -77,7 +77,7 @@ forge install OpenZeppelin/openzeppelin-contracts@v5.7.0
 
 `pragma` on Nether sources: `pragma solidity 0.8.36;` (exact, not `^`). `auto_detect_solc = false`.
 
-Not in this freeze: frontend, indexer, Gravekeeper, AAVE adapter addresses, or optimizer_runs retunes after a measured W6 size/gas problem (that retune would supersede this NDR if it must change the frozen compiler settings).
+Not in this freeze: frontend (see Proposed [`NDR-0003`](0003-frontend-stack.md)), indexer, Gravekeeper, AAVE adapter addresses, or optimizer_runs retunes after a measured W6 size/gas problem (that retune would supersede this NDR if it must change the frozen compiler settings).
 
 ## Consequences
 
