@@ -131,7 +131,7 @@ OpenZeppelin modules expected later (do not invent substitutes):
 
 - `ERC20`, `ERC20Burnable` (W1)
 - `ReentrancyGuard` (W2–W4)
-- `Ownable2Step` for strategy-replacement handoff (W4). No `Pausable` on Grave or Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md) Proposed)
+- `Ownable2Step` for strategy-replacement handoff (W4). No `Pausable` on Grave or Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md))
 - `TimelockController` only if W4/W6 cannot reuse already-deployed Base infrastructure (spec §18.2)
 
 Forbidden in this repo unless a later NDR says otherwise:

@@ -1,11 +1,11 @@
 # NDR-0005: Strategy replacement security
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-14
 - Supersedes: (none)
 - Superseded by: (none)
 
-This record is a **draft**. It is not accepted. The intended choice is Option B, including the pause and lock shape in §Decision. W4 may use that as the working posture. Acceptance locks it for v1. Internals of a later safer adapter still need a new NDR when that work starts.
+This record is **accepted**. Option B is locked for v1: Grave admin is timelocked strategy replacement only; no pause on Grave or Reaper; W4/W5 do not build the safer meta-strategy. Internals of a later safer adapter, and the moment Grave owner is set to `address(0)`, still need a new NDR when that work starts.
 
 ## Context
 
@@ -50,7 +50,7 @@ Ship spec §6.5 / §10.2 as a standing owner committee: deployer, then a multisi
 
 No planned successor. When the Grave is large, the same structure is the whole defense. This option does not decide pause placement.
 
-### Option B: Status quo now; later safer adapter; then lock Grave replacement (intended)
+### Option B: Status quo now; later safer adapter; then lock Grave replacement (chosen)
 
 Ship v1 with **Grave admin = strategy replacement only** (schedule / cancel / execute, plus one-time `setReaper` and ownership handoff). Do **not** put `Pausable` on Grave or Reaper. Do **not** implement batching, loss checks, auto-stop, or internal diversification in W4 or in the first production adapter (W5).
 
