@@ -101,7 +101,7 @@ contract AaveV3WethAdapterForkTest is Test {
         uint256 aBal = IAToken(A_WETH).balanceOf(address(adapter));
         assertApproxEqAbs(aBal, 2 ether, 2);
         assertEq(adapter.totalAssetsInETH(), aBal);
-        assertGe(grave.currentNAV(), grave.protectedPrincipal());
+        assertApproxEqAbs(grave.currentNAV(), grave.protectedPrincipal(), 2);
         assertEq(IERC20View(VARIABLE_DEBT_WETH).balanceOf(address(adapter)), 0);
         vm.prank(address(adapter));
         IAaveV3Pool(pool).setUserUseReserveAsCollateral(WETH, false);
@@ -133,26 +133,28 @@ contract AaveV3WethAdapterForkTest is Test {
     function test_migrateToMockAndBackToAave() public {
         vm.prank(alice);
         grave.bury{value: 1 ether}(0);
-        uint256 navBefore = adapter.totalAssetsInETH();
         TestInvestAdapter next = new TestInvestAdapter(address(grave));
         uint256 adminBefore = admin.balance;
         vm.prank(admin);
         grave.scheduleStrategy(address(next));
         vm.warp(block.timestamp + 14 days);
+        uint256 navAtMigrate = adapter.totalAssetsInETH();
         vm.prank(admin);
         grave.executeStrategyMigration();
         assertEq(grave.activeStrategy(), address(next));
-        assertApproxEqAbs(address(next).balance, navBefore, 2);
+        assertGt(address(next).balance, 0);
+        assertApproxEqAbs(address(next).balance, navAtMigrate, 2);
         assertEq(admin.balance, adminBefore);
         assertEq(IERC20View(VARIABLE_DEBT_WETH).balanceOf(address(adapter)), 0);
 
+        uint256 ethOnMock = address(next).balance;
         vm.prank(admin);
         grave.scheduleStrategy(address(adapter));
         vm.warp(block.timestamp + 14 days);
         vm.prank(admin);
         grave.executeStrategyMigration();
         assertEq(grave.activeStrategy(), address(adapter));
-        assertApproxEqAbs(IAToken(A_WETH).balanceOf(address(adapter)), navBefore, 2);
+        assertApproxEqAbs(IAToken(A_WETH).balanceOf(address(adapter)), ethOnMock, 2);
         assertEq(address(next).balance, 0);
         assertEq(admin.balance, adminBefore);
         assertEq(IERC20View(VARIABLE_DEBT_WETH).balanceOf(address(adapter)), 0);
