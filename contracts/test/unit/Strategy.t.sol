@@ -59,23 +59,33 @@ contract RevertingWithdrawAdapter is IStrategyAdapter {
     }
 }
 
-contract BrokenNavAdapter is IStrategyAdapter {
+contract ToggleNavAdapter is IStrategyAdapter {
     address public immutable grave;
+    bool public broken;
 
     constructor(address grave_) {
         grave = grave_;
     }
 
+    function setBroken(bool broken_) external {
+        broken = broken_;
+    }
+
     function depositETH() external payable {
-        revert("deposit");
+        if (msg.sender != grave) revert();
     }
 
-    function withdrawETH(uint256, address) external view returns (uint256) {
-        revert("withdraw");
+    function withdrawETH(uint256 amount, address recipient) external returns (uint256 received) {
+        if (msg.sender != grave) revert();
+        received = amount < address(this).balance ? amount : address(this).balance;
+        if (received > 0) {
+            payable(recipient).transfer(received);
+        }
     }
 
-    function totalAssetsInETH() external pure returns (uint256) {
-        revert("nav");
+    function totalAssetsInETH() external view returns (uint256) {
+        if (broken) revert("nav");
+        return address(this).balance;
     }
 
     function underlying() external pure returns (address) {
@@ -681,15 +691,14 @@ contract StrategyTest is Test {
     }
 
     function test_brokenNavAdapterCanBeMigratedAway() public {
-        BrokenNavAdapter broken = new BrokenNavAdapter(address(grave));
+        ToggleNavAdapter broken = new ToggleNavAdapter(address(grave));
         TestInvestAdapter next = new TestInvestAdapter(address(grave));
-        vm.prank(admin);
-        grave.scheduleStrategy(address(broken));
-        vm.warp(block.timestamp + 14 days);
-        vm.prank(admin);
-        grave.executeStrategyMigration();
+        _activate(address(broken));
         _bury(alice, 1 ether);
-        assertEq(address(grave).balance, 1 ether);
+        vm.prank(bob);
+        (bool ok,) = address(grave).call{value: 0.5 ether}("");
+        assertTrue(ok);
+        broken.setBroken(true);
         vm.expectRevert();
         grave.currentNAV();
 
@@ -701,7 +710,8 @@ contract StrategyTest is Test {
         grave.executeStrategyMigration();
         assertEq(grave.activeStrategy(), address(next));
         assertEq(admin.balance, adminBefore);
-        assertEq(next.totalAssetsInETH(), 1 ether);
+        assertEq(next.totalAssetsInETH(), 0.5 ether);
+        assertEq(address(broken).balance, 1 ether);
     }
 
     function test_thiefAdapterDoesNotPayOwner() public {
