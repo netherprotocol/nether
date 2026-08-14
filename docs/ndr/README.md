@@ -42,3 +42,4 @@ docs/ndr/
 | [0004](0004-source-available-until-mainnet.md) | Source-available until mainnet, then MIT | Accepted |
 | [0005](0005-strategy-security.md) | Strategy replacement security | Accepted |
 | [0006](0006-aave-v3-weth-adapter.md) | Initial production strategy adapter (Aave V3 WETH) | Accepted |
+| [0007](0007-aave-pool-via-provider.md) | Resolve Aave Pool via PoolAddressesProvider | Accepted |
