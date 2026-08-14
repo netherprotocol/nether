@@ -239,7 +239,7 @@ A later `FOUNDRY_PROFILE=ci` may tighten fuzz runs; W0 can use Foundry defaults.
 6. Add root `.gitignore` and contract CI.
 7. Confirm `forge fmt --check`, `forge build`, and `forge test` succeed from `contracts/`.
 
-SPDX license on new Solidity files: `MIT`, matching OpenZeppelin, unless a later docs change says otherwise. That is a W0 convenience, not an NDR.
+SPDX license on new Solidity files: `UNLICENSED` until production relicensing, per [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md). That identifier is proprietary / no license granted, not the Unlicense. After successful Base mainnet deployment (M2), original Nether source relicenses to MIT.
 
 ## 10. Acceptance criteria
 
