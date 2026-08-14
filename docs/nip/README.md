@@ -30,4 +30,4 @@ docs/nip/
 | [0001](0001-scaffolding.md) | Repository scaffolding | Implemented |
 | [0002](0002-landing-docs.md) | Landing site and documentation | Implemented |
 | [0003](0003-neth.md) | NETH token | Implemented |
-| [0004](0004-grave.md) | Grave — burial, eras, and reckoning | Planned |
+| [0004](0004-grave.md) | Grave — burial, eras, and reckoning | Implemented |
