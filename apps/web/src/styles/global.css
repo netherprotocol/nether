@@ -32,6 +32,15 @@ body {
   overflow-x: hidden;
 }
 
+@media (min-width: 768px) {
+  .holder-page {
+    display: flex;
+    flex-direction: column;
+    height: 100svh;
+    overflow: hidden;
+  }
+}
+
 .locked-cta {
   position: relative;
   display: inline-block;

@@ -28,7 +28,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <Font cssVariable="--font-cormorant" preload />
     <Font cssVariable="--font-inter" preload />
   </head>
-  <body class:list={[surface === 'holder' ? 'holder-page' : 'site-glow', 'min-h-svh antialiased']}>
+  <body
+    class:list={[
+      surface === 'holder' ? 'holder-page' : 'site-glow',
+      'min-h-svh antialiased',
+    ]}
+  >
     <Header />
     <slot />
   </body>
