@@ -27,6 +27,12 @@ Do not guess on:
 
 Ask a specific question. State what you already know and the options you see. Do not proceed on an assumption you cannot ground in existing docs or an NDR.
 
+## Graphics and icons
+
+- Do not invent, generate, or hand-draw icons, illustrations, marks, or other complex graphics.
+- Use an existing icon pack. Prefer one already in the tree; otherwise add a conventional pack (Lucide is the current web choice: `@lucide/astro`).
+- For custom images, logos, and illustrations, ask the user for the asset. Do not generate a substitute.
+
 ## No agent attribution
 
 Do not include agent attribution anywhere in the project’s git or review artifacts.

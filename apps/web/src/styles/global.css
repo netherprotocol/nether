@@ -29,6 +29,44 @@ body {
 
 .holder-page {
   background: #000;
+  overflow-x: hidden;
+}
+
+.locked-cta {
+  position: relative;
+  display: inline-block;
+}
+
+.locked-cta-tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.55rem);
+  z-index: 30;
+  width: max-content;
+  max-width: 16.5rem;
+  transform: translateX(-50%);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgb(244 239 230 / 0.14);
+  background: #141414;
+  color: var(--color-paper);
+  font-size: 0.72rem;
+  font-weight: 300;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.locked-cta-below .locked-cta-tip {
+  bottom: auto;
+  top: calc(100% + 0.55rem);
+}
+
+.locked-cta:hover .locked-cta-tip,
+.locked-cta:focus-within .locked-cta-tip {
+  opacity: 1;
 }
 
 .doc-body {

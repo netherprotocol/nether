@@ -7,7 +7,8 @@ export const HOLDER_COPY =
   'Bury ETH forever. Mint $NETH. When the Grave earns, the Reaper buys and burns — no redemption, no peg, no promises.';
 export const PRIMARY_CTA = 'Enter the Grave';
 export const SECONDARY_CTA = 'Documentation';
-export const APP_LATER_TITLE = 'The app ships in a later W7 NIP';
+export const GRAVE_LOCKED_HINT =
+  'The Grave has not been dug yet. Once it is, you’ll be able to look inside.';
 
 export const FEATURES = [
   {

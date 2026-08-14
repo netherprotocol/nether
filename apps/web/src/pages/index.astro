@@ -1,12 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import FeatureIcon from '../components/FeatureIcons.astro';
+import LockedCta from '../components/LockedCta.astro';
 import {
-  APP_LATER_TITLE,
   FEATURES,
   HOLDER_COPY,
   HOLDER_KICKER,
-  PRIMARY_CTA,
   SECONDARY_CTA,
   SITE_DESCRIPTION,
   SITE_TITLE,
@@ -21,7 +20,7 @@ const heroSrc = withBase('hero.png');
 <Layout title={SITE_TITLE} description={SITE_DESCRIPTION} surface="holder">
   <main class="flex min-h-[calc(100svh-4.5rem)] flex-col">
     <section
-      class="relative grid flex-1 items-center gap-6 px-6 pt-2 pb-4 md:grid-cols-[minmax(0,1fr)_minmax(16rem,26rem)] md:gap-4 md:px-16 md:pt-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,32rem)]"
+      class="relative grid flex-1 items-center gap-4 px-6 pt-2 pb-2 md:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] md:gap-2 md:px-12 md:pt-0 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:px-16"
     >
       <div class="relative z-10 max-w-xl">
         <h1 class="font-display text-[4rem] leading-none text-white md:text-[5.5rem] lg:text-8xl">
@@ -35,16 +34,8 @@ const heroSrc = withBase('hero.png');
         <p class="mt-4 max-w-md text-[0.92rem] leading-relaxed font-light text-paper">
           {HOLDER_COPY}
         </p>
-        <div class="mt-8 flex flex-wrap gap-3">
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            title={APP_LATER_TITLE}
-            class="bg-accent cursor-not-allowed px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase"
-          >
-            {PRIMARY_CTA}
-          </button>
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <LockedCta placement="hero" />
           <a
             href={docsHref}
             class="border border-white/85 px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase"
@@ -53,13 +44,13 @@ const heroSrc = withBase('hero.png');
           </a>
         </div>
       </div>
-      <div class="relative mx-auto w-full max-w-md md:max-w-none">
+      <div class="hero-mark relative mx-auto w-full md:mx-0">
         <img
           src={heroSrc}
           alt=""
           width="1122"
           height="1402"
-          class="relative z-10 mx-auto block h-auto w-full max-h-[min(34rem,52svh)] object-contain"
+          class="relative z-10 mx-auto block h-auto w-full origin-center object-contain md:w-[145%] md:max-w-none md:-translate-x-[12%] md:scale-110"
         />
       </div>
     </section>

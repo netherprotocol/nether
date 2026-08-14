@@ -1,41 +1,22 @@
 ---
-import { APP_LATER_TITLE, PRIMARY_CTA, SITE_TITLE, withBase } from '../lib/site';
+import { withBase } from '../lib/site';
+import LockedCta from './LockedCta.astro';
 
 const homeHref = withBase();
 const docsHref = withBase('docs');
-const shareUrl = Astro.site
-  ? new URL(import.meta.env.BASE_URL, Astro.site).href
-  : 'https://rastsislaux.github.io/nether/';
-const tweetHref = `https://x.com/intent/tweet?text=${encodeURIComponent(`${SITE_TITLE} — bury ETH forever.`)}&url=${encodeURIComponent(shareUrl)}`;
 ---
 
 <header class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-4 md:px-10 md:py-5">
   <a href={homeHref} class="font-display text-xl text-white md:text-2xl">Nether</a>
-  <nav class="flex items-center gap-6 justify-self-center" aria-label="Primary">
+  <nav class="justify-self-center" aria-label="Primary">
     <a
       href={docsHref}
       class="text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]"
     >
       Docs
     </a>
-    <a
-      href={tweetHref}
-      rel="noopener noreferrer"
-      target="_blank"
-      class="text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]"
-    >
-      Tweet
-    </a>
   </nav>
   <div class="justify-self-end">
-    <button
-      type="button"
-      disabled
-      aria-disabled="true"
-      title={APP_LATER_TITLE}
-      class="bg-accent cursor-not-allowed px-3 py-2 text-[0.62rem] tracking-[0.2em] text-white uppercase md:px-4 md:text-[0.68rem]"
-    >
-      {PRIMARY_CTA}
-    </button>
+    <LockedCta placement="header" />
   </div>
 </header>
