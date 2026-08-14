@@ -29,7 +29,7 @@ In scope:
 
 Out of scope:
 
-- Strategy adapter calls, `harvest()`, timelock, pause, `StrategyDeposit` / migration events (W4)
+- Strategy adapter calls, `harvest()`, timelock, `StrategyDeposit` / migration events (W4)
 - Reaper, auctions, `totalNethReaped`, Reaper views (W3)
 - Deploy scripts (W6), frontend (W7), keeper (W8)
 - Accepting NDR-0002
@@ -220,7 +220,7 @@ Spec §2, §6.1, §10, §16.2, §20:
 - no ETH redemption, withdrawal, or “unstake”
 - no mint except through `neth.mint` from `bury()`’s deterministic amount
 - no admin mint, era-parameter setter, or standing privilege
-- no pause on burial in W2 (W4 pause is strategy-sensitive operations, not this slice)
+- no pause on burial in W2 (W4 does not pause Grave either; [`NDR-0005`](../ndr/0005-strategy-security.md))
 - no NETH price oracle, DEX hook, or market-cap input
 - no wrapping / strategy deposit / harvest / Reaper credit
 - no proxy, UUPS, Beacon, or upgradeable OpenZeppelin modules
@@ -365,12 +365,11 @@ W2 is done when:
 Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 
 - Reaper address wiring, auctions, burns (W3). Plan: [`NIP-0005`](0005-reaper.md)
-- `IStrategyAdapter` use, harvest, depositing idle ETH into a strategy, `currentNAV` including adapter assets, pause, timelock, Ownable/AccessControl (W4)
+- `IStrategyAdapter` use, harvest, depositing idle ETH into a strategy, `currentNAV` including adapter assets, timelock, Ownable (W4). Plan: [`NIP-0006`](0006-strategy.md)
 - production adapter (W5; NDR before code)
 - CREATE2, cost script, explorer verification (W6)
 - accepting the compiler / OZ / Foundry freeze (NDR-0002)
-- whether `StrategyManager` is a separate deployed contract (W4; [`NIP-0001`](0001-scaffolding.md) §4)
 
 No new NDR is required for this plan. The library split, idle ETH, and `EraCompleted` meaning of reckoning are already in [`NIP-0000`](0000-the-roadmap.md). Constructor-vs-setter for NETH is already [`NIP-0003`](0003-neth.md). Donation-as-surplus is spec §16.2. `maxEra` is spec §5.4 applied to §5.1 constants. Public APIs below are spec §6.1 / §12 / §13, not new surfaces.
 
-W4 is expected to extend `Grave.sol` in place (same immutable monetary contract, additional strategy/harvest functions) before W6 production deploy. Keep principal accounting independent of `address(this).balance` so donations and later adapter NAV cannot rewrite `protectedPrincipal`.
+W4 extends `Grave.sol` in place (same immutable monetary contract, additional strategy/harvest functions). Plan: [`NIP-0006`](0006-strategy.md). Keep principal accounting independent of `address(this).balance` so donations and later adapter NAV cannot rewrite `protectedPrincipal`.

@@ -8,6 +8,7 @@
 - NETH: [`0003-neth.md`](0003-neth.md)
 - Grave: [`0004-grave.md`](0004-grave.md)
 - Reaper: [`0005-reaper.md`](0005-reaper.md)
+- Strategy: [`0006-strategy.md`](0006-strategy.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
@@ -37,7 +38,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 | 2 | `$NETH` ERC-20 | **W1** | [`NIP-0003`](0003-neth.md); Grave-only mint (§11) |
 | 3 | Burying ETH, Grave, reckoning, eras | **W2** | [`NIP-0004`](0004-grave.md); era math library split out; reckoning = `EraCompleted` |
 | 4 | Reaper reverse Dutch auction | **W3** | [`NIP-0005`](0005-reaper.md); independent of the first production adapter |
-| 5 | Investment interface, yield to Reaper, strategy governance | **W4** | Harvest, timelock, **test invest adapter**. Pause is not on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)) |
+| 5 | Investment interface, yield to Reaper, strategy governance | **W4** | [`NIP-0006`](0006-strategy.md); harvest, timelock, **test invest adapter**. Pause is not on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)) |
 | 6 | AAVE pool for MVP | **W5** | Most probable; specific choice TBD with NDR |
 | 7 | Landing site and dashboard | **W7** | Two surfaces, one workstream; FE stack [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
 | 8 | Grave Keeper (cranker) bot | **W8** | Pair with observability |
@@ -109,6 +110,8 @@ W3 can be built against NETH plus test-injected Reaper ETH. Production funding c
 
 ### W4 — Strategy interface, harvest, and strategy governance
 
+Detailed plan: [`0006-strategy.md`](0006-strategy.md).
+
 This is the replaceable economic surface. Spec §6.4–§6.5, §7, §10–§11.
 
 Internal breakdown:
@@ -121,6 +124,8 @@ Internal breakdown:
 6. Multisig-capable admin using existing audited Base infrastructure where possible; production ownership must leave the deployer EOA (§10.2, §18). Do not renounce at launch.
 
 Admin authority is strategy replacement (timelocked) only. It is not upgradeability of NETH, Grave, or Reaper, and it is not pause of harvest or Reaper auctions.
+
+[`NIP-0006`](0006-strategy.md) keeps the strategy slot on Grave (no separate `StrategyManager`), uses `Ownable2Step` plus an embedded 14-day delay, one-time `setReaper`, harvest that sends ETH immediately to Reaper, and a test-only invest adapter under `contracts/test/mocks/`. No pause on Grave or Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).
 
 ### W5 — Initial production strategy (AAVE candidate)
 
@@ -224,7 +229,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | NETH mint lock | One-time `setGrave`, then immutable; no standing admin. See [`NIP-0003`](0003-neth.md). |
 | Toolchain versions | Proposed in [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md); not frozen until that NDR is accepted. |
 | This plan | Living NIP. Adjust on demand. Do not copy it into an NDR. |
-| Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. W2 plan: [`NIP-0004`](0004-grave.md). |
+| Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. W2 plan: [`NIP-0004`](0004-grave.md). W4 plan: [`NIP-0006`](0006-strategy.md). |
 | Strategy replacement security | v1: owner + 14-day delay, no Grave/Reaper pause; later safer adapter then `owner → 0`. [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). |
 
 Nearby setup authority that is *not* monetary upgradeability, and is already in the spec:
@@ -257,7 +262,7 @@ Routine mechanical work (typos, tests that restore documented behavior) does not
 W0 scaffold
  └─ W1 NETH ([`NIP-0003`](0003-neth.md))
      ├─ W2 Grave ([`NIP-0004`](0004-grave.md); era math library → bury → reckoning / EraCompleted → idle ETH)
-     │    └─ W4 strategy interface, harvest, timelock, test invest adapter
+     │    └─ W4 strategy interface, harvest, timelock, test invest adapter ([`NIP-0006`](0006-strategy.md))
      │         └─ W5 production adapter (after NDR)
      └─ W3 Reaper ([`NIP-0005`](0005-reaper.md); can overlap W2 once NETH exists)
             └─ W4 harvest credits Reaper (no pause of auction creation)
