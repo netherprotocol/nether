@@ -5,13 +5,39 @@ Copyright (c) 2026 the Nether authors. All rights reserved.
 Original Nether source in this repository is **source-available and proprietary**.
 It is published so the protocol can be inspected. It is not free software.
 
-## Terms
+## Contribution permission
 
-No license is granted to use, copy, modify, merge, publish, distribute,
-sublicense, or sell original Nether source, or to deploy copies of it, without
-prior written permission from the copyright holder.
+You may, without further permission:
 
-Viewing the public repository does not grant those rights.
+1. Fork and clone this repository.
+2. Copy and modify original Nether source in that fork.
+3. Build and test that fork locally.
+4. Submit pull requests or patches to this repository.
+
+Those permissions are only for inspecting this protocol and contributing
+changes back to this project.
+
+They do **not** allow you to deploy original Nether source (or a modified
+copy) as a live protocol or product, use it in another project, sublicense
+it, sell it, or distribute it except as a fork of this repository or as a
+pull request or patch to this repository.
+
+## Contributions
+
+By submitting a contribution to this repository, you grant the Nether authors
+a perpetual, worldwide, royalty-free license to use, modify, and distribute
+your contribution under this license and, after the planned relicensing,
+under the MIT License.
+
+## No warranty
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## Planned relicensing
 

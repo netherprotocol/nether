@@ -39,4 +39,5 @@ docs/ndr/
 | [0001](0001-adopt-immutable-ndrs.md) | Adopt immutable Nether Decision Records | Accepted |
 | [0002](0002-toolchain-version-freeze.md) | Toolchain version freeze | Proposed |
 | [0003](0003-frontend-stack.md) | Frontend stack | Accepted |
-| [0004](0004-source-available-until-mainnet.md) | Source-available until mainnet, then MIT | Accepted |
+| [0004](0004-source-available-until-mainnet.md) | Source-available until mainnet, then MIT | Superseded |
+| [0005](0005-contribution-grant-until-mit.md) | Contribution grant and as-is terms until MIT | Accepted |

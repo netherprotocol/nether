@@ -1,9 +1,9 @@
 # NDR-0004: Source-available until mainnet, then MIT
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-14
 - Supersedes: (none)
-- Superseded by: (none)
+- Superseded by: NDR-0005
 
 This record is **accepted**. Original Nether source stays proprietary and
 source-available until successful Base mainnet deployment, then is relicensed
