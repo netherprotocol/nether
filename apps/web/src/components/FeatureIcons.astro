@@ -1,0 +1,30 @@
+---
+import Landmark from '@lucide/astro/icons/landmark';
+import Hourglass from '@lucide/astro/icons/hourglass';
+import Skull from '@lucide/astro/icons/skull';
+import Eclipse from '@lucide/astro/icons/eclipse';
+
+interface Props {
+  name: 'grave' | 'reckoning' | 'reaper' | 'end';
+}
+
+const { name } = Astro.props;
+const iconClass = 'h-7 w-7 text-accent';
+---
+
+{
+  name === 'grave' && (
+    <Landmark class={iconClass} stroke-width={1.25} aria-hidden="true" />
+  )
+}
+{
+  name === 'reckoning' && (
+    <Hourglass class={iconClass} stroke-width={1.25} aria-hidden="true" />
+  )
+}
+{
+  name === 'reaper' && <Skull class={iconClass} stroke-width={1.25} aria-hidden="true" />
+}
+{
+  name === 'end' && <Eclipse class={iconClass} stroke-width={1.25} aria-hidden="true" />
+}

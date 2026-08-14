@@ -1,0 +1,21 @@
+---
+import { GRAVE_LOCKED_HINT, PRIMARY_CTA } from '../lib/site';
+
+interface Props {
+  placement?: 'header' | 'hero';
+}
+
+const { placement = 'hero' } = Astro.props;
+const tipId = placement === 'header' ? 'grave-locked-header' : 'grave-locked-hero';
+const buttonClass =
+  placement === 'header'
+    ? 'bg-accent cursor-not-allowed px-3 py-2 text-[0.62rem] tracking-[0.2em] text-white uppercase md:px-4 md:text-[0.68rem]'
+    : 'bg-accent cursor-not-allowed px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase';
+---
+
+<span class:list={['locked-cta', placement === 'header' && 'locked-cta-below']}>
+  <button type="button" disabled aria-disabled="true" aria-describedby={tipId} class={buttonClass}>
+    {PRIMARY_CTA}
+  </button>
+  <span id={tipId} role="tooltip" class="locked-cta-tip">{GRAVE_LOCKED_HINT}</span>
+</span>

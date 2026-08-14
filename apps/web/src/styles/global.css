@@ -3,8 +3,8 @@
 @theme inline {
   --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --color-accent: #7a4035;
-  --color-accent-glow: rgb(122 64 53 / 0.38);
+  --color-accent: #a05a40;
+  --color-accent-glow: rgb(160 90 64 / 0.42);
   --color-paper: #f4efe6;
   --color-muted: rgb(244 239 230 / 0.72);
 }
@@ -25,6 +25,122 @@ body {
   background:
     radial-gradient(ellipse 70% 55% at 72% 48%, var(--color-accent-glow), transparent 62%),
     #000;
+}
+
+.holder-page {
+  background: #000;
+  overflow-x: hidden;
+}
+
+@media (min-width: 768px) {
+  .holder-page {
+    display: flex;
+    flex-direction: column;
+    height: 100svh;
+    overflow: hidden;
+  }
+}
+
+.locked-cta {
+  position: relative;
+  display: inline-block;
+}
+
+.locked-cta-tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.55rem);
+  z-index: 30;
+  width: max-content;
+  max-width: 16.5rem;
+  transform: translateX(-50%);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgb(244 239 230 / 0.14);
+  background: #141414;
+  color: var(--color-paper);
+  font-size: 0.72rem;
+  font-weight: 300;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.locked-cta-below .locked-cta-tip {
+  bottom: auto;
+  top: calc(100% + 0.55rem);
+}
+
+.locked-cta:hover .locked-cta-tip,
+.locked-cta:focus-within .locked-cta-tip {
+  opacity: 1;
+}
+
+.risk-warning {
+  position: relative;
+  display: inline-block;
+  max-width: 42rem;
+}
+
+.risk-warning-trigger {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(244 239 230 / 0.62);
+  cursor: help;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 300;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.risk-warning-trigger:hover,
+.risk-warning-trigger:focus-visible {
+  color: var(--color-paper);
+}
+
+.risk-warning-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex-shrink: 0;
+  margin-top: 0.12rem;
+  color: var(--color-accent);
+}
+
+.risk-warning-tip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.55rem);
+  z-index: 40;
+  width: max-content;
+  max-width: min(36rem, calc(100vw - 2rem));
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgb(244 239 230 / 0.14);
+  background: #141414;
+  color: var(--color-paper);
+  font-size: 0.72rem;
+  font-weight: 300;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.risk-warning-tip p + p {
+  margin-top: 0.7rem;
+}
+
+.risk-warning:hover .risk-warning-tip,
+.risk-warning:focus-within .risk-warning-tip {
+  opacity: 1;
 }
 
 .doc-body {
