@@ -6,6 +6,7 @@
 - Decision log: [`ndr/README.md`](../ndr/README.md)
 - Scaffolding: [`0001-scaffolding.md`](0001-scaffolding.md)
 - NETH: [`0003-neth.md`](0003-neth.md)
+- Grave: [`0004-grave.md`](0004-grave.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
@@ -33,7 +34,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 |---|---|---|---|
 | 1 | Scaffold Solidity / OpenZeppelin / toolchain | **W0** | [`NIP-0001`](0001-scaffolding.md) |
 | 2 | `$NETH` ERC-20 | **W1** | [`NIP-0003`](0003-neth.md); Grave-only mint (§11) |
-| 3 | Burying ETH, Grave, reckoning, eras | **W2** | Era math library split out; reckoning = `EraCompleted` |
+| 3 | Burying ETH, Grave, reckoning, eras | **W2** | [`NIP-0004`](0004-grave.md); era math library split out; reckoning = `EraCompleted` |
 | 4 | Reaper reverse Dutch auction | **W3** | Independent of the first production adapter |
 | 5 | Investment interface, yield to Reaper, strategy governance | **W4** | Harvest, pause, timelock, **test invest adapter** |
 | 6 | AAVE pool for MVP | **W5** | Most probable; specific choice TBD with NDR |
@@ -78,14 +79,18 @@ Deployment order in §18.3 is NETH, then Grave, then lock mint authority. W1 sho
 
 ### W2 — Grave: eras, burial, reckoning
 
+Detailed plan: [`0004-grave.md`](0004-grave.md).
+
 Implement spec §5–§6.1 and the burial-related views/events in §12–§13.
 
 Break the work internally:
 
-1. **Era math library** (approved split): capacity, reward rate, multi-era split, `minNethOut`, rounding that favors the protocol by at most one wei-equivalent of NETH per internal era segment, and the maximum reachable era derived from constants (not a discretionary cap).
+1. **Era math library** (approved split): capacity, reward rate, multi-era split, rounding that favors the protocol by at most one wei-equivalent of NETH per internal era segment, and the maximum reachable era derived from constants (not a discretionary cap). `minNethOut` is the `bury()` slippage check.
 2. **`bury()`**: irreversible capitalization, `protectedPrincipal` monotonicity, mint to `msg.sender`, era-boundary crossings in one transaction.
 3. **Reckoning**: the era-change event. Emit `EraCompleted(era, ethBuried, nethMinted)` whenever an era fills, including when a single `bury()` crosses one or more era boundaries.
 4. **Idle ETH** until a strategy is configured: buried ETH may sit as idle backing so W2 is testable before W4/W5.
+
+[`NIP-0004`](0004-grave.md) puts `minNethOut` on `bury()`, derives `maxEra` from constants (79 for §5.1), and keeps ETH idle on Grave. Reckoning is `EraCompleted` with era-level totals.
 
 W2 must not implement strategy migration, harvest, or Reaper logic.
 
@@ -205,7 +210,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | Topic | Decision |
 |---|---|
 | Upgradeability | None for now. Follow the spec: NETH, Grave, and Reaper are immutable at deploy. Admin is strategy timelock + emergency pause only. Sepolia may iterate by redeploy. |
-| Reckoning | The era-change event: `EraCompleted` when an era fills (including mid-`bury()` boundary crossings). Not NAV, harvest, or Reaper settlement. |
+| Reckoning | The era-change event: `EraCompleted` when an era fills (including mid-`bury()` boundary crossings). Not NAV, harvest, or Reaper settlement. See [`NIP-0004`](0004-grave.md). |
 | Initial strategy | AAVE is the most probable MVP adapter. Specific deployment/pool/NAV details TBD in an NDR before W5 code. |
 | Reaper minimum budget | None. Leftover pre-1.0 wording in the spec was cleaned to match §21. |
 | Frontend stack | [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md). Indexer still TBD (W8). |
@@ -214,7 +219,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | NETH mint lock | One-time `setGrave`, then immutable; no standing admin. See [`NIP-0003`](0003-neth.md). |
 | Toolchain versions | Proposed in [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md); not frozen until that NDR is accepted. |
 | This plan | Living NIP. Adjust on demand. Do not copy it into an NDR. |
-| Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. |
+| Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. W2 plan: [`NIP-0004`](0004-grave.md). |
 
 Nearby setup authority that is *not* monetary upgradeability, and is already in the spec:
 
@@ -244,7 +249,7 @@ Routine mechanical work (typos, tests that restore documented behavior) does not
 ```text
 W0 scaffold
  └─ W1 NETH ([`NIP-0003`](0003-neth.md))
-     ├─ W2 Grave (era math library → bury → reckoning / EraCompleted → idle ETH)
+     ├─ W2 Grave ([`NIP-0004`](0004-grave.md); era math library → bury → reckoning / EraCompleted → idle ETH)
      │    └─ W4 strategy interface, harvest, timelock, pause, test invest adapter
      │         └─ W5 production adapter (after NDR)
      └─ W3 Reaper (can overlap W2 once NETH exists)
