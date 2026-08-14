@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import ShardMark from '../components/ShardMark.astro';
 import FeatureIcon from '../components/FeatureIcons.astro';
 import {
   APP_LATER_TITLE,
@@ -16,12 +15,13 @@ import {
 } from '../lib/site';
 
 const docsHref = withBase('docs');
+const heroSrc = withBase('hero.png');
 ---
 
 <Layout title={SITE_TITLE} description={SITE_DESCRIPTION} surface="holder">
   <main class="flex min-h-[calc(100svh-4.5rem)] flex-col">
     <section
-      class="relative grid flex-1 items-center gap-6 px-6 pt-2 pb-4 md:grid-cols-[minmax(0,1fr)_minmax(14rem,22rem)] md:gap-6 md:px-16 md:pt-0 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,26rem)]"
+      class="relative grid flex-1 items-center gap-6 px-6 pt-2 pb-4 md:grid-cols-[minmax(0,1fr)_minmax(16rem,26rem)] md:gap-4 md:px-16 md:pt-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,32rem)]"
     >
       <div class="relative z-10 max-w-xl">
         <h1 class="font-display text-[4rem] leading-none text-white md:text-[5.5rem] lg:text-8xl">
@@ -54,26 +54,20 @@ const docsHref = withBase('docs');
         </div>
       </div>
       <div class="relative mx-auto w-full max-w-md md:max-w-none">
-        <div
-          class="pointer-events-none absolute inset-x-[8%] top-[18%] bottom-[10%] rounded-full bg-[radial-gradient(ellipse_at_bottom,rgb(196_120_80_/_0.42),transparent_68%)]"
-        >
-        </div>
-        <ShardMark />
+        <img src={heroSrc} alt="" width="1122" height="1402" class="relative z-10 block h-auto w-full" />
       </div>
     </section>
 
     <section
       class="grid gap-8 px-6 py-5 md:grid-cols-4 md:gap-8 md:px-16 md:py-4"
-      aria-label="Protocol principles"
+      aria-label="Protocol"
     >
       {
         FEATURES.map((feature) => (
           <article>
             <FeatureIcon name={feature.icon} />
             <h2 class="mt-4 text-[0.7rem] tracking-[0.22em] text-accent uppercase">{feature.title}</h2>
-            <p class="mt-2 max-w-xs text-[0.82rem] leading-relaxed font-light text-paper/90">
-              {feature.body}
-            </p>
+            <p class="mt-2 text-[0.82rem] leading-relaxed font-light text-paper/90">{feature.body}</p>
           </article>
         ))
       }
@@ -85,24 +79,15 @@ const docsHref = withBase('docs');
     >
       {
         STATS.map((stat) => (
-          <div class="flex-1 border-b border-white/10 px-5 py-4 md:border-r md:border-b-0 md:px-8 md:py-5">
+          <div class="flex-1 border-b border-white/10 px-5 py-4 md:border-r md:border-b-0 md:last:border-r-0 md:px-8 md:py-5">
             <p class="text-[0.62rem] tracking-[0.22em] text-accent uppercase">{stat.label}</p>
             <p class="mt-1.5 text-sm font-light text-white md:text-[0.95rem]">{stat.value}</p>
+            {stat.detail ? (
+              <p class="mt-0.5 text-[0.75rem] font-light text-paper/65">{stat.detail}</p>
+            ) : null}
           </div>
         ))
       }
-      <div class="flex items-center justify-end px-5 py-3 md:px-6">
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          title={APP_LATER_TITLE}
-          class="inline-flex cursor-not-allowed items-center gap-3 border border-white/12 bg-[#141414] px-4 py-2.5 text-sm text-white"
-        >
-          0 $NETH
-          <span aria-hidden="true" class="text-white/70">→</span>
-        </button>
-      </div>
     </section>
   </main>
 </Layout>

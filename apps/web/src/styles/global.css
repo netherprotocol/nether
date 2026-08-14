@@ -28,43 +28,7 @@ body {
 }
 
 .holder-page {
-  background:
-    radial-gradient(ellipse 48% 42% at 78% 38%, rgb(160 90 64 / 0.22), transparent 64%),
-    #000;
-}
-
-.shard-stage {
-  position: relative;
-  width: 100%;
-}
-
-.shard-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.shard-pulse {
-  transform-origin: 260px 528px;
-  animation: shard-pulse 4.8s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .shard-pulse {
-    animation: none;
-  }
-}
-
-@keyframes shard-pulse {
-  0%,
-  100% {
-    opacity: 0.85;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.06);
-  }
+  background: #000;
 }
 
 .doc-body {

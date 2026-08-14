@@ -5,39 +5,45 @@ export const SITE_BASE = '/nether/';
 export const HOLDER_KICKER = 'Bury ETH forever';
 export const HOLDER_COPY =
   'Bury ETH forever. Mint $NETH. When the Grave earns, the Reaper buys and burns — no redemption, no peg, no promises.';
-export const PRIMARY_CTA = 'Enter the void.';
+export const PRIMARY_CTA = 'Enter the Grave';
 export const SECONDARY_CTA = 'Documentation';
 export const APP_LATER_TITLE = 'The app ships in a later W7 NIP';
 
 export const FEATURES = [
   {
     icon: 'grave',
-    title: 'Burn mechanism',
-    body: 'Yield funds a reverse Dutch auction. The Reaper buys $NETH and burns it.',
+    title: 'The Grave',
+    body: 'Bury ETH forever in The Grave. From what remains, rises $NETH.',
+  },
+  {
+    icon: 'reckoning',
+    title: 'Reckoning',
+    body: 'Once the reckoning comes, the reward for burying is halved.',
   },
   {
     icon: 'reaper',
-    title: 'No redemption',
-    body: 'There is no exit. Buried ETH cannot be redeemed.',
+    title: 'The Reaper',
+    body: 'What the Grave earns, Reaper spends to buy back $NETH, draining the supply.',
   },
   {
-    icon: 'lock',
-    title: 'No peg',
-    body: '$NETH isn’t pegged to ETH or any other asset.',
-  },
-  {
-    icon: 'silence',
-    title: 'No promises',
-    body: 'No yield to holders. No floor. No promised price.',
+    icon: 'end',
+    title: 'The End',
+    body: 'It all ends when there’s no more ETH.',
   },
 ] as const;
 
-export const STATS = [
-  { label: 'Supply', value: '10M $NETH / era' },
-  { label: 'Network', value: 'Base' },
-  { label: 'Liquidity', value: 'Not required' },
-  { label: 'Address', value: 'Unpublished' },
-] as const;
+export type Stat = {
+  label: string;
+  value: string;
+  detail?: string;
+};
+
+export const STATS: readonly Stat[] = [
+  { label: 'Grave size', value: '0 ETH' },
+  { label: 'Supply', value: '0 $NETH', detail: '10M $NETH / era' },
+  { label: 'Current burial rate', value: '1M $NETH / 1 ETH' },
+  { label: 'Contract', value: 'Address Unknown Yet' },
+];
 
 export function withBase(pathname = ''): string {
   const base = import.meta.env.BASE_URL || SITE_BASE;
