@@ -9,26 +9,26 @@ function mulberry32(seed: number) {
 }
 
 const rand = mulberry32(0x4e657468);
-const particles = Array.from({ length: 110 }, () => {
+const particles = Array.from({ length: 96 }, () => {
   const angle = rand() * Math.PI * 2;
-  const radius = 28 + rand() * 210;
+  const radius = 22 + rand() * 168;
   return {
     x: 260 + Math.cos(angle) * radius,
-    y: 552 + Math.sin(angle) * (10 + rand() * 26) + rand() * 8,
-    r: 0.35 + rand() * 1.55,
-    o: 0.1 + rand() * 0.5,
-    copper: rand() > 0.72,
+    y: 528 + Math.sin(angle) * (8 + rand() * 22) + rand() * 6,
+    r: 0.35 + rand() * 1.4,
+    o: 0.1 + rand() * 0.48,
+    copper: rand() > 0.7,
   };
 });
 ---
 
 <div class="shard-stage" aria-hidden="true">
-  <svg class="shard-svg" viewBox="0 0 520 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg class="shard-svg" viewBox="40 8 440 560" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <radialGradient id="underglow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#e8a078" stop-opacity="0.95"></stop>
+        <stop offset="0%" stop-color="#f0b090" stop-opacity="0.95"></stop>
         <stop offset="28%" stop-color="#c56a45" stop-opacity="0.55"></stop>
-        <stop offset="62%" stop-color="#8a3d28" stop-opacity="0.18"></stop>
+        <stop offset="62%" stop-color="#8a3d28" stop-opacity="0.16"></stop>
         <stop offset="100%" stop-color="#000" stop-opacity="0"></stop>
       </radialGradient>
       <radialGradient id="ground" cx="50%" cy="40%" r="55%">
@@ -36,62 +36,58 @@ const particles = Array.from({ length: 110 }, () => {
         <stop offset="55%" stop-color="#0a0807" stop-opacity="0.35"></stop>
         <stop offset="100%" stop-color="#000" stop-opacity="0"></stop>
       </radialGradient>
-      <linearGradient id="faceUL" x1="140" y1="80" x2="260" y2="280" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="#2a2420"></stop>
-        <stop offset="100%" stop-color="#0c0a09"></stop>
+      <linearGradient id="faceUL" x1="150" y1="40" x2="260" y2="250" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#2c2622"></stop>
+        <stop offset="100%" stop-color="#0b0908"></stop>
       </linearGradient>
-      <linearGradient id="faceUR" x1="380" y1="60" x2="260" y2="280" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="#3a322c"></stop>
-        <stop offset="100%" stop-color="#14110f"></stop>
+      <linearGradient id="faceUR" x1="370" y1="30" x2="260" y2="250" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#3d342e"></stop>
+        <stop offset="100%" stop-color="#12100e"></stop>
       </linearGradient>
-      <linearGradient id="faceLL" x1="160" y1="500" x2="260" y2="280" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="#a45a3c"></stop>
-        <stop offset="45%" stop-color="#5a2e22"></stop>
-        <stop offset="100%" stop-color="#1a100c"></stop>
+      <linearGradient id="faceLL" x1="170" y1="500" x2="260" y2="250" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#b05e3e"></stop>
+        <stop offset="42%" stop-color="#5c3022"></stop>
+        <stop offset="100%" stop-color="#160e0b"></stop>
       </linearGradient>
-      <linearGradient id="faceLR" x1="360" y1="540" x2="260" y2="260" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="#d48962"></stop>
-        <stop offset="38%" stop-color="#8a4a32"></stop>
-        <stop offset="100%" stop-color="#221612"></stop>
+      <linearGradient id="faceLR" x1="350" y1="520" x2="260" y2="230" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#e09268"></stop>
+        <stop offset="36%" stop-color="#8a4a32"></stop>
+        <stop offset="100%" stop-color="#1c120e"></stop>
       </linearGradient>
-      <linearGradient id="innerWall" x1="200" y1="330" x2="320" y2="180" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="#c07852"></stop>
-        <stop offset="100%" stop-color="#3a241c"></stop>
-      </linearGradient>
-      <linearGradient id="edge" x1="260" y1="40" x2="260" y2="560" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="#6a5e54" stop-opacity="0.35"></stop>
+      <linearGradient id="edge" x1="260" y1="20" x2="260" y2="530" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#6a5e54" stop-opacity="0.3"></stop>
         <stop offset="70%" stop-color="#e0a07a" stop-opacity="0.85"></stop>
         <stop offset="100%" stop-color="#ffc8a0" stop-opacity="1"></stop>
       </linearGradient>
-      <linearGradient id="reflectFade" x1="0" y1="568" x2="0" y2="640" gradientUnits="userSpaceOnUse">
+      <linearGradient id="reflectFade" x1="0" y1="532" x2="0" y2="568" gradientUnits="userSpaceOnUse">
         <stop offset="0%" stop-color="#fff" stop-opacity="0.28"></stop>
         <stop offset="100%" stop-color="#fff" stop-opacity="0"></stop>
       </linearGradient>
       <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-        <feGaussianBlur stdDeviation="18" result="b"></feGaussianBlur>
+        <feGaussianBlur stdDeviation="16" result="b"></feGaussianBlur>
         <feMerge>
           <feMergeNode in="b"></feMergeNode>
           <feMergeNode in="SourceGraphic"></feMergeNode>
         </feMerge>
       </filter>
       <filter id="soft">
-        <feGaussianBlur stdDeviation="22"></feGaussianBlur>
+        <feGaussianBlur stdDeviation="20"></feGaussianBlur>
       </filter>
       <mask id="reflectMask">
-        <rect x="0" y="568" width="520" height="72" fill="url(#reflectFade)"></rect>
+        <rect x="0" y="532" width="520" height="40" fill="url(#reflectFade)"></rect>
       </mask>
     </defs>
 
-    <ellipse cx="260" cy="568" rx="240" ry="58" fill="url(#ground)"></ellipse>
-    <ellipse class="shard-pulse" cx="260" cy="560" rx="170" ry="36" fill="url(#underglow)" filter="url(#soft)"
+    <ellipse cx="260" cy="536" rx="200" ry="46" fill="url(#ground)"></ellipse>
+    <ellipse class="shard-pulse" cx="260" cy="528" rx="148" ry="30" fill="url(#underglow)" filter="url(#soft)"
     ></ellipse>
-    <ellipse cx="260" cy="558" rx="70" ry="10" fill="#f0b090" opacity="0.55" filter="url(#glow)"></ellipse>
+    <ellipse cx="260" cy="526" rx="58" ry="8" fill="#f0b090" opacity="0.55" filter="url(#glow)"></ellipse>
 
     {
-      Array.from({ length: 14 }, (_, i) => {
-        const t = (i - 6.5) / 6.5;
-        const y = 530 + Math.abs(t) * 18;
-        const half = 210 - Math.abs(t) * 70;
+      Array.from({ length: 12 }, (_, i) => {
+        const t = (i - 5.5) / 5.5;
+        const y = 504 + Math.abs(t) * 16;
+        const half = 176 - Math.abs(t) * 58;
         return (
           <line
             x1={260 - half}
@@ -115,37 +111,36 @@ const particles = Array.from({ length: 110 }, () => {
       />
     ))}
 
-    <g mask="url(#reflectMask)" opacity="0.35" transform="translate(0 1120) scale(1 -1)">
-      <path d="M260 42 L96 248 L260 248 Z" fill="#2a201c"></path>
-      <path d="M260 42 L424 248 L260 248 Z" fill="#3a2c26"></path>
-      <path d="M96 248 L260 558 L260 248 Z" fill="#8a4a32"></path>
-      <path d="M424 248 L260 558 L260 248 Z" fill="#c07852"></path>
+    <g mask="url(#reflectMask)" opacity="0.32" transform="translate(0 1060) scale(1 -1)">
+      <path d="M260 28 L128 232 L260 232 Z" fill="#2a201c"></path>
+      <path d="M260 28 L392 232 L260 232 Z" fill="#3a2c26"></path>
+      <path d="M128 232 L260 524 L260 232 Z" fill="#8a4a32"></path>
+      <path d="M392 232 L260 524 L260 232 Z" fill="#c07852"></path>
     </g>
 
     <g class="shard-body">
-      <path d="M260 42 L96 248 L200 248 L260 172 Z" fill="url(#faceUL)"></path>
-      <path d="M260 42 L424 248 L320 248 L260 172 Z" fill="url(#faceUR)"></path>
-      <path d="M96 248 L260 558 L260 338 L200 248 Z" fill="url(#faceLL)"></path>
-      <path d="M424 248 L260 558 L260 338 L320 248 Z" fill="url(#faceLR)"></path>
-
-      <path d="M260 172 L200 248 L260 188 L320 248 Z" fill="url(#innerWall)" opacity="0.55"></path>
-      <path d="M200 248 L260 338 L248 250 Z" fill="#6a3828" opacity="0.7"></path>
-      <path d="M320 248 L260 338 L272 250 Z" fill="#e09a74" opacity="0.45"></path>
-
+      <path d="M260 28 L128 232 L208 232 L260 158 Z" fill="url(#faceUL)"></path>
+      <path d="M260 28 L392 232 L312 232 L260 158 Z" fill="url(#faceUR)"></path>
+      <path d="M128 232 L260 524 L260 318 L208 232 Z" fill="url(#faceLL)"></path>
+      <path d="M392 232 L260 524 L260 318 L312 232 Z" fill="url(#faceLR)"></path>
+      <path d="M260 158 L312 232 L260 318 L208 232 Z" fill="#050303"></path>
+      <path d="M260 158 L208 232 L260 176 L312 232 Z" fill="#c07852" opacity="0.28"></path>
+      <path d="M208 232 L260 318 L252 236 Z" fill="#6a3828" opacity="0.55"></path>
+      <path d="M312 232 L260 318 L268 236 Z" fill="#e09a74" opacity="0.35"></path>
       <path
-        d="M260 42 L96 248 L260 558 L424 248 Z"
+        d="M260 28 L128 232 L260 524 L392 232 Z"
         stroke="url(#edge)"
         stroke-width="1.1"
         opacity="0.55"
       ></path>
       <path
-        d="M260 172 L320 248 L260 338 L200 248 Z"
+        d="M260 158 L312 232 L260 318 L208 232 Z"
         stroke="#e8b090"
         stroke-width="1"
-        opacity="0.4"
+        opacity="0.45"
       ></path>
-      <path d="M260 42 L260 172" stroke="#d8c8bc" stroke-width="0.7" opacity="0.28"></path>
-      <path d="M260 338 L260 558" stroke="#ffd0b0" stroke-width="1.1" opacity="0.55"></path>
+      <path d="M260 28 L260 158" stroke="#d8c8bc" stroke-width="0.7" opacity="0.28"></path>
+      <path d="M260 318 L260 524" stroke="#ffd0b0" stroke-width="1.1" opacity="0.55"></path>
     </g>
   </svg>
 </div>

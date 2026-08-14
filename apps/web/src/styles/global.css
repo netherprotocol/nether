@@ -45,7 +45,7 @@ body {
 }
 
 .shard-pulse {
-  transform-origin: 260px 560px;
+  transform-origin: 260px 528px;
   animation: shard-pulse 4.8s ease-in-out infinite;
 }
 
