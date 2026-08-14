@@ -140,7 +140,7 @@ The interface does not name `onlyGrave`. Adapters MUST still reject callers othe
 
 Grave then forwards harvested ETH to Reaper itself. An adapter MUST NOT mint NETH, call `sellToReaper`, alter era state, use leverage, or hold directional non-ETH exposure as its intended return (spec §6.4).
 
-`underlying()` for the native-ETH test adapter is `address(0)`. W5’s NDR names WETH vs native ETH for production.
+`underlying()` for the native-ETH test adapter is `address(0)`. Production `underlying()` is canonical WETH ([`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md)).
 
 Only one active adapter (spec §20). `activeStrategy() == address(0)` means idle ETH on Grave, as in W2.
 
@@ -628,7 +628,7 @@ W4 is done when:
 
 Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 
-- production adapter (W5; NDR before code: pool, underlying, NAV source, realization path)
+- production adapter implementation (W5; venue is [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
 - any `IStrategyAdapter` surface change (only if W5 proves §6.4 insufficient — then an NDR, not a silent edit)
 - which Base multisig-capable account receives ownership (W6; reuse existing infrastructure)
 - CREATE2, cost script, explorer verification (W6)

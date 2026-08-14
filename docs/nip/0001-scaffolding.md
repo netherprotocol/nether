@@ -258,5 +258,5 @@ Leave these to later NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 - Accepting the compiler / OZ / Foundry freeze (NDR-0002)
 - Frontend freeze (NDR-0003, Accepted); indexer remains TBD (W8)
 - Gravekeeper language and runtime
-- Initial production strategy (AAVE candidate)
+- Initial production strategy ([`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md), Accepted)
 - Any `IStrategyAdapter` surface change

@@ -366,7 +366,7 @@ Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md)
 
 - Reaper address wiring, auctions, burns (W3). Plan: [`NIP-0005`](0005-reaper.md)
 - `IStrategyAdapter` use, harvest, depositing idle ETH into a strategy, `currentNAV` including adapter assets, timelock, Ownable (W4). Plan: [`NIP-0006`](0006-strategy.md)
-- production adapter (W5; NDR before code)
+- production adapter (W5; [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
 - CREATE2, cost script, explorer verification (W6)
 - accepting the compiler / OZ / Foundry freeze (NDR-0002)
 
