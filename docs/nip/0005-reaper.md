@@ -1,6 +1,6 @@
 # NIP-0005: Reaper — reverse Dutch auction
 
-- Status: Planned
+- Status: Implemented
 - Date: 2026-08-14
 - Workstream: W3
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
