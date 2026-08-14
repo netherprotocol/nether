@@ -7,6 +7,7 @@
 - Scaffolding: [`0001-scaffolding.md`](0001-scaffolding.md)
 - NETH: [`0003-neth.md`](0003-neth.md)
 - Grave: [`0004-grave.md`](0004-grave.md)
+- Reaper: [`0005-reaper.md`](0005-reaper.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
@@ -35,7 +36,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 | 1 | Scaffold Solidity / OpenZeppelin / toolchain | **W0** | [`NIP-0001`](0001-scaffolding.md) |
 | 2 | `$NETH` ERC-20 | **W1** | [`NIP-0003`](0003-neth.md); Grave-only mint (§11) |
 | 3 | Burying ETH, Grave, reckoning, eras | **W2** | [`NIP-0004`](0004-grave.md); era math library split out; reckoning = `EraCompleted` |
-| 4 | Reaper reverse Dutch auction | **W3** | Independent of the first production adapter |
+| 4 | Reaper reverse Dutch auction | **W3** | [`NIP-0005`](0005-reaper.md); independent of the first production adapter |
 | 5 | Investment interface, yield to Reaper, strategy governance | **W4** | Harvest, pause, timelock, **test invest adapter** |
 | 6 | AAVE pool for MVP | **W5** | Most probable; specific choice TBD with NDR |
 | 7 | Landing site and dashboard | **W7** | Two surfaces, one workstream; FE stack [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
@@ -96,11 +97,15 @@ W2 must not implement strategy migration, harvest, or Reaper logic.
 
 ### W3 — Reaper
 
+Detailed plan: [`0005-reaper.md`](0005-reaper.md).
+
 Implement spec §8: permissionless auction start when `availableReaperETH > 0` and no auction is active; 7-day linear reverse Dutch auction from `2.00 * R` to `1.05 * R`; partial fills; immediate burn; rollover; no NETH oracle; no DEX.
 
 There is no protocol-enforced minimum auction budget. Any positive available Reaper ETH may start an auction. Callers decide whether a given size is rational after gas. Until an auction is started, harvested yield remains in `availableReaperETH`.
 
 W3 can be built against NETH plus test-injected Reaper ETH. Production funding comes from harvest in W4.
+
+[`NIP-0005`](0005-reaper.md) puts §12 Reaper views on `Reaper` (not Grave), takes NETH and Grave as constructor immutables, credits `receive()` ETH as donations unless `msg.sender` is Grave, and leaves Grave unchanged until W4 harvest.
 
 ### W4 — Strategy interface, harvest, and strategy governance
 
@@ -212,7 +217,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | Upgradeability | None for now. Follow the spec: NETH, Grave, and Reaper are immutable at deploy. Admin is strategy timelock + emergency pause only. Sepolia may iterate by redeploy. |
 | Reckoning | The era-change event: `EraCompleted` when an era fills (including mid-`bury()` boundary crossings). Not NAV, harvest, or Reaper settlement. See [`NIP-0004`](0004-grave.md). |
 | Initial strategy | AAVE is the most probable MVP adapter. Specific deployment/pool/NAV details TBD in an NDR before W5 code. |
-| Reaper minimum budget | None. Leftover pre-1.0 wording in the spec was cleaned to match §21. |
+| Reaper minimum budget | None. Leftover pre-1.0 wording in the spec was cleaned to match §21. See [`NIP-0005`](0005-reaper.md). |
 | Frontend stack | [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md). Indexer still TBD (W8). |
 | Keeper language / runtime | TBD when W8 requires a choice; then an NDR. |
 | Repo layout | Isolated `contracts/`, `apps/web/`, and `apps/keeper/` trees. See [`NIP-0001`](0001-scaffolding.md). |
@@ -252,7 +257,7 @@ W0 scaffold
      ├─ W2 Grave ([`NIP-0004`](0004-grave.md); era math library → bury → reckoning / EraCompleted → idle ETH)
      │    └─ W4 strategy interface, harvest, timelock, pause, test invest adapter
      │         └─ W5 production adapter (after NDR)
-     └─ W3 Reaper (can overlap W2 once NETH exists)
+     └─ W3 Reaper ([`NIP-0005`](0005-reaper.md); can overlap W2 once NETH exists)
             └─ W4 harvest credits Reaper; pause includes auction creation
 
 M0 gate: W1–W5 tests, invariants, economic sim, Base fork tests
