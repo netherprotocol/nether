@@ -40,3 +40,4 @@ docs/ndr/
 | [0002](0002-toolchain-version-freeze.md) | Toolchain version freeze | Proposed |
 | [0003](0003-frontend-stack.md) | Frontend stack | Accepted |
 | [0004](0004-source-available-until-mainnet.md) | Source-available until mainnet, then MIT | Accepted |
+| [0005](0005-strategy-security.md) | Strategy replacement security | Proposed |
