@@ -4,6 +4,23 @@ import tailwindcss from '@tailwindcss/vite';
 import { unified } from '@astrojs/markdown-remark';
 import { remarkRewriteDocLinks } from './src/lib/remark-rewrite-doc-links';
 
+const GITHUB_REPO_FALLBACK = 'https://github.com/rastsislaux/nether';
+
+function resolveGithubRepo(): string {
+  const explicit = process.env.PUBLIC_GITHUB_REPO?.trim();
+  if (explicit) {
+    return explicit.replace(/\/+$/, '');
+  }
+  const server = process.env.GITHUB_SERVER_URL?.replace(/\/+$/, '');
+  const repo = process.env.GITHUB_REPOSITORY?.replace(/^\/+|\/+$/g, '');
+  if (server && repo) {
+    return `${server}/${repo}`;
+  }
+  return GITHUB_REPO_FALLBACK;
+}
+
+process.env.PUBLIC_GITHUB_REPO = resolveGithubRepo();
+
 export default defineConfig({
   site: 'https://rastsislaux.github.io',
   base: '/nether/',

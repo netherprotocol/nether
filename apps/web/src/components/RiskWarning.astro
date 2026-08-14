@@ -1,0 +1,18 @@
+---
+import CircleAlert from '@lucide/astro/icons/circle-alert';
+import { RISK_WARNING, RISK_WARNING_DETAILS } from '../lib/site';
+---
+
+<div class="risk-warning">
+  <button
+    type="button"
+    class="risk-warning-trigger"
+    aria-describedby="risk-warning-details"
+  >
+    <CircleAlert class="risk-warning-icon" stroke-width={1.5} aria-hidden="true" />
+    <span>{RISK_WARNING}</span>
+  </button>
+  <div id="risk-warning-details" role="tooltip" class="risk-warning-tip">
+    {RISK_WARNING_DETAILS.map((paragraph) => <p>{paragraph}</p>)}
+  </div>
+</div>

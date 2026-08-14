@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import FeatureIcon from '../components/FeatureIcons.astro';
 import LockedCta from '../components/LockedCta.astro';
+import RiskWarning from '../components/RiskWarning.astro';
 import {
   FEATURES,
   HOLDER_COPY,
@@ -69,6 +70,10 @@ const heroSrc = withBase('hero.png');
         ))
       }
     </section>
+
+    <div class="px-6 pb-4 md:px-16">
+      <RiskWarning />
+    </div>
 
     <section
       class="mt-auto flex flex-col border-t border-white/10 bg-[#0b0b0b] md:flex-row md:items-stretch"

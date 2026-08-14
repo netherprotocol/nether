@@ -1,5 +1,5 @@
 ---
-import { withBase } from '../lib/site';
+import { GITHUB_REPO_URL, withBase } from '../lib/site';
 import LockedCta from './LockedCta.astro';
 
 const homeHref = withBase();
@@ -8,12 +8,20 @@ const docsHref = withBase('docs');
 
 <header class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-4 md:px-10 md:py-5">
   <a href={homeHref} class="font-display text-xl text-white md:text-2xl">Nether</a>
-  <nav class="justify-self-center" aria-label="Primary">
+  <nav class="flex items-center gap-6 justify-self-center" aria-label="Primary">
     <a
       href={docsHref}
       class="text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]"
     >
       Docs
+    </a>
+    <a
+      href={GITHUB_REPO_URL}
+      rel="noopener noreferrer"
+      target="_blank"
+      class="text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]"
+    >
+      Source
     </a>
   </nav>
   <div class="justify-self-end">

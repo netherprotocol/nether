@@ -46,6 +46,25 @@ export const STATS: readonly Stat[] = [
   { label: 'Contract', value: 'Address Unknown Yet' },
 ];
 
+export const GITHUB_REPO_FALLBACK = 'https://github.com/rastsislaux/nether';
+export const GITHUB_REPO_URL = githubRepoUrl();
+
+export const RISK_WARNING =
+  'Capital at high risk, team does not hold any responsibility for possible losses. Hover for details.';
+export const RISK_WARNING_DETAILS = [
+  'Nether is not an investment product. Profit is not guaranteed, and you may lose some or all of your capital. $NETH is not backed or redeemable 1:1 for ETH; its value relies solely on Nether’s economic feedback loop, which may fail to maintain a stable DEX/Reaper rate.',
+  'The protocol and smart contracts are provided “as is,” without warranties or guarantees. The team holds no responsibility for any loss of capital, damages, or other consequences arising from use of the protocol, including bugs, exploits, smart-contract attacks, oracle or third-party failures, network outages or congestion, market conditions, economic-model failures, or other technical or external events.',
+  'Capital is at high risk. Use Nether entirely at your own risk.',
+] as const;
+
+function githubRepoUrl(): string {
+  const fromEnv = import.meta.env.PUBLIC_GITHUB_REPO;
+  if (typeof fromEnv === 'string' && fromEnv.trim()) {
+    return fromEnv.trim().replace(/\/+$/, '');
+  }
+  return GITHUB_REPO_FALLBACK;
+}
+
 export function withBase(pathname = ''): string {
   const base = import.meta.env.BASE_URL || SITE_BASE;
   const prefix = base.endsWith('/') ? base : `${base}/`;
