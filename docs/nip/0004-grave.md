@@ -364,7 +364,7 @@ W2 is done when:
 
 Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 
-- Reaper address wiring, auctions, burns (W3)
+- Reaper address wiring, auctions, burns (W3). Plan: [`NIP-0005`](0005-reaper.md)
 - `IStrategyAdapter` use, harvest, depositing idle ETH into a strategy, `currentNAV` including adapter assets, pause, timelock, Ownable/AccessControl (W4)
 - production adapter (W5; NDR before code)
 - CREATE2, cost script, explorer verification (W6)
