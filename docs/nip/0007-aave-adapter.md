@@ -1,6 +1,6 @@
 # NIP-0007: Aave V3 WETH adapter
 
-- Status: Proposed
+- Status: Implemented
 - Date: 2026-08-14
 - Workstream: W5
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)

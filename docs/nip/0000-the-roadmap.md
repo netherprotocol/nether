@@ -247,7 +247,7 @@ Do not accept these until the question is actually being decided. A Proposed rec
 | Compiler / OZ / Foundry version freeze | M2 (can wait until late M0) | Spec §18.3. Draft: [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (Proposed) |
 | `IStrategyAdapter` surface change, if any | W4 | Only if the spec interface is insufficient |
 | Strategy replacement security (owner theft vs later proxy) | W4 locked; later NIP for the proxy | [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). Not the W5 venue NDR |
-| Initial production strategy (Aave V3 WETH) | W5 | Venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). Pool lookup [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md) (Accepted). Plan: [`NIP-0007`](0007-aave-adapter.md) (Proposed) |
+| Initial production strategy (Aave V3 WETH) | W5 | Venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). Pool lookup [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md) (Accepted). Plan: [`NIP-0007`](0007-aave-adapter.md) (Implemented) |
 | Frontend framework | W7 landing | [`NDR-0003`](../ndr/0003-frontend-stack.md) (Accepted). Plan: [`NIP-0002`](0002-landing-docs.md) |
 | Indexer | W8 | Still TBD; live views can use §12 + RPC without one |
 | Keeper language / runtime | W8 | When a stack must be chosen |
