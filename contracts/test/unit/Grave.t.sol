@@ -2,6 +2,7 @@
 pragma solidity 0.8.36;
 
 import {Test} from "forge-std/Test.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {NETH} from "src/NETH.sol";
 import {Grave} from "src/Grave.sol";
@@ -36,6 +37,7 @@ contract GraveTest is Test {
     uint256 internal constant FULL_ERA_NETH = 10_000_000 ether;
 
     address internal setter;
+    address internal admin;
     address internal alice;
     address internal bob;
     NETH internal neth;
@@ -48,10 +50,11 @@ contract GraveTest is Test {
 
     function setUp() public {
         setter = makeAddr("setter");
+        admin = makeAddr("admin");
         alice = makeAddr("alice");
         bob = makeAddr("bob");
         neth = new NETH(setter);
-        grave = new Grave(address(neth));
+        grave = new Grave(address(neth), admin);
         math = new EraMathHarness();
         vm.prank(setter);
         neth.setGrave(address(grave));
@@ -67,12 +70,12 @@ contract GraveTest is Test {
 
     function test_constructorRevertsZeroAddress() public {
         vm.expectRevert(Grave.ZeroAddress.selector);
-        new Grave(address(0));
+        new Grave(address(0), admin);
     }
 
     function test_constructorRevertsEoa() public {
         vm.expectRevert(Grave.NotContract.selector);
-        new Grave(alice);
+        new Grave(alice, admin);
     }
 
     function test_genesisState() public view {
@@ -86,6 +89,12 @@ contract GraveTest is Test {
         assertEq(grave.currentRewardRate(), 1_000_000 ether);
         assertEq(grave.activeStrategy(), address(0));
         assertEq(grave.harvestableYield(), 0);
+        assertEq(grave.reaper(), address(0));
+        assertEq(grave.owner(), admin);
+        assertEq(grave.pendingOwner(), address(0));
+        (address pending, uint256 executeAfter) = grave.pendingStrategy();
+        assertEq(pending, address(0));
+        assertEq(executeAfter, 0);
         assertEq(address(neth.grave()), address(grave));
     }
 
@@ -308,21 +317,28 @@ contract GraveTest is Test {
         assertEq(address(grave).balance, 15 ether);
     }
 
-    function test_noWithdrawRedeemHarvestPauseOrOwner() public {
+    function test_constructorRevertsZeroOwner() public {
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
+        new Grave(address(neth), address(0));
+    }
+
+    function test_noWithdrawRedeemPauseUnstake() public {
         _assertSelectorAbsent(abi.encodeWithSignature("withdraw(uint256)", uint256(1)));
         _assertSelectorAbsent(abi.encodeWithSignature("redeem(uint256)", uint256(1)));
         _assertSelectorAbsent(abi.encodeWithSignature("unstake(uint256)", uint256(1)));
-        _assertSelectorAbsent(abi.encodeWithSignature("harvest()"));
         _assertSelectorAbsent(abi.encodeWithSignature("pause()"));
         _assertSelectorAbsent(abi.encodeWithSignature("unpause()"));
-        _assertSelectorAbsent(abi.encodeWithSignature("owner()"));
-        _assertSelectorAbsent(abi.encodeWithSignature("transferOwnership(address)", alice));
+        _assertSelectorAbsent(abi.encodeWithSignature("paused()"));
+
+        vm.expectRevert(Grave.ReaperNotSet.selector);
+        grave.harvest();
+        assertEq(grave.owner(), admin);
     }
 
     function test_buryReentrancyGuarded() public {
         ReenteringNETH attacker = new ReenteringNETH();
         vm.deal(address(attacker), 5 ether);
-        Grave g = new Grave(address(attacker));
+        Grave g = new Grave(address(attacker), admin);
         attacker.setGrave(g);
         vm.deal(alice, 2 ether);
 
@@ -377,7 +393,7 @@ contract GraveTest is Test {
 
     function test_buryBeforeSetGraveReverts() public {
         NETH unlocked = new NETH(setter);
-        Grave g = new Grave(address(unlocked));
+        Grave g = new Grave(address(unlocked), admin);
         vm.deal(alice, 1 ether);
         vm.prank(alice);
         vm.expectRevert(NETH.NotGrave.selector);

@@ -105,7 +105,7 @@ contract GraveInvariantTest is Test {
     function setUp() public {
         address setter = makeAddr("setter");
         neth = new NETH(setter);
-        grave = new Grave(address(neth));
+        grave = new Grave(address(neth), makeAddr("admin"));
         math = new EraMathHarness();
         vm.prank(setter);
         neth.setGrave(address(grave));

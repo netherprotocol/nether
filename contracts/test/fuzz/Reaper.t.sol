@@ -21,7 +21,7 @@ contract ReaperFuzzTest is Test {
         setter = makeAddr("setter");
         alice = makeAddr("alice");
         neth = new NETH(setter);
-        grave = new Grave(address(neth));
+        grave = new Grave(address(neth), makeAddr("admin"));
         vm.prank(setter);
         neth.setGrave(address(grave));
         reaper = new Reaper(address(neth), address(grave));

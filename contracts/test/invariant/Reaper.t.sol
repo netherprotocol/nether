@@ -152,7 +152,7 @@ contract ReaperInvariantTest is Test {
     function setUp() public {
         address setter = makeAddr("setter");
         neth = new NETH(setter);
-        grave = new Grave(address(neth));
+        grave = new Grave(address(neth), makeAddr("admin"));
         vm.prank(setter);
         neth.setGrave(address(grave));
         reaper = new Reaper(address(neth), address(grave));
