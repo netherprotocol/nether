@@ -6,17 +6,18 @@
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Working versions: Proposed [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (not accepted)
+- Strategy admin: Proposed [`NDR-0005`](../ndr/0005-strategy-security.md)
 - License: [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md) (`SPDX-License-Identifier: UNLICENSED`)
 
-This plan is the W4 breakdown. It implements spec §6.2–§6.5, §7, §10–§11, and the harvest / strategy / pause views and events in §12–§13. It does not implement a production adapter, deploy scripts, or a DEX.
+This plan is the W4 breakdown. It implements spec §6.2–§6.5, §7, §10–§11, and the harvest / strategy views and events in §12–§13. It does not implement a production adapter, deploy scripts, a DEX, or pause on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).
 
 ## 1. Purpose
 
-Ship the replaceable economic surface: Grave talks to `IStrategyAdapter`, harvests yield above protected principal into Reaper, and lets admin replace the adapter after a 14-day public delay. Emergency pause stops strategy-sensitive work without pausing NETH transfers or enabling principal withdrawal.
+Ship the replaceable economic surface: Grave talks to `IStrategyAdapter`, harvests yield above protected principal into Reaper, and lets admin replace the adapter after a 14-day public delay. Grave admin is strategy replacement only. Investing pause, if any, lives on the adapter. Reaper is not paused.
 
 M0 must not depend on AAVE. The approved extra split is a **test invest adapter** under `contracts/test/` ([`NIP-0000`](0000-the-roadmap.md) §2). Production adapter code is W5, after its NDR.
 
-NETH, era math, and Reaper auction economics stay as shipped. W4 extends `Grave.sol` in place and adds a pause check to `Reaper.startAuction`.
+NETH, era math, and Reaper auction economics stay as shipped. W4 extends `Grave.sol` in place. Reaper is unchanged except that W4 harvest already credits `msg.sender == grave`.
 
 ## 2. Scope
 
@@ -27,11 +28,10 @@ In scope:
 - `currentNAV = idleETH + strategy.totalAssetsInETH()`; high-watermark harvest; loss-recovery-first
 - Permissionless `harvest()` that sends realized surplus ETH to Reaper (`YieldHarvested`)
 - One-time Grave → Reaper wiring (spec §18.3 deploys Reaper after Grave)
-- After a successful `bury()`, move idle ETH into the active adapter when one is set and not paused
+- After a successful `bury()`, move idle ETH into the active adapter when one is set; if `depositETH` reverts, leave ETH idle (do not revert `bury()`)
 - Strategy scheduling, 14-day delay, migration through Grave into the new adapter, post-migration NAV event
-- Emergency pause of new strategy deposits, harvests, migrations, and Reaper auction **creation**
-- `Ownable2Step` on Grave for admin handoff; production ownership leaves the deployer EOA at W6
-- Unit, fuzz, invariant, and §15.3 yield-scenario tests required by spec §17 for harvest, pause, and migration
+- `Ownable2Step` on Grave for admin handoff; production ownership leaves the deployer EOA at W6; do not disable `renounceOwnership` (later lock per [`NDR-0005`](../ndr/0005-strategy-security.md))
+- Unit, fuzz, invariant, and §15.3 yield-scenario tests required by spec §17 for harvest and migration
 
 Out of scope:
 
@@ -49,7 +49,7 @@ Do not implement ETH redemption, multiple simultaneous adapters, leverage, a NET
 
 ## 3. Architecture choices
 
-These are the authorized shapes for W4. They do not change era math, harvestable-yield allocation, the 14-day delay, or pause limits. Spec wins if anything below disagrees.
+These are the authorized shapes for W4. They do not change era math, harvestable-yield allocation, or the 14-day delay. Spec wins if anything below disagrees. Pause placement is [`NDR-0005`](../ndr/0005-strategy-security.md).
 
 ### 3.1 Strategy slot on Grave, not a separate `StrategyManager`
 
@@ -65,18 +65,17 @@ Do not add `src/StrategyManager.sol`.
 
 ### 3.2 Admin: `Ownable2Step` on Grave only
 
-Spec §10.2: one admin that can schedule/execute strategy changes, pause, and unpause. [`NIP-0001`](0001-scaffolding.md) §5 names `Ownable2Step` and/or `AccessControl` for W4 handoff.
+Spec §10.2: admin schedules/executes strategy changes. [`NIP-0001`](0001-scaffolding.md) §5 names `Ownable2Step` for W4 handoff. [`NDR-0005`](../ndr/0005-strategy-security.md): Grave admin is replacement only; no pause on Grave.
 
 | Shape | Why not |
 |---|---|
-| `AccessControl` with several roles | Spec does not split pauser from strategy admin. Extra surface for W6 permission checks. |
+| `AccessControl` with several roles | Spec does not split roles. Extra surface for W6 permission checks. |
 | `Ownable` without two-step | Spec §10.2 requires an explicit tested handoff; two-step prevents a mistyped Safe address from instantly taking control. |
-| Owner on Reaper or NETH | Reaper has no admin functions. NETH mint lock is already one-shot `setGrave` ([`NIP-0003`](0003-neth.md)). Pause is not an ERC-20 pause. |
-| `Ownable2Step` on Grave (chosen) | Single admin, two-step transfer, W6 sets owner to existing Base Safe infrastructure. |
+| Owner on Reaper or NETH | Reaper has no admin functions. NETH mint lock is already one-shot `setGrave` ([`NIP-0003`](0003-neth.md)). |
+| Disable `renounceOwnership` | Would block the later `owner → address(0)` lock in NDR-0005. |
+| `Ownable2Step` on Grave (chosen) | Single admin, two-step transfer, W6 sets owner to existing Base Safe infrastructure. Renounce stays available; W6 must not call it at launch. |
 
-Override `renounceOwnership` to revert. Spec §10.2 needs an admin for emergency pause; renouncing would brick pause and migration.
-
-W4 tests use an EOA `admin`. W6 transfers to a multisig-capable account. Do not deploy a Safe or custom multisig in this slice (§18.2).
+W4 tests use an EOA `admin`. W6 transfers to a multisig-capable account. Do not deploy a Safe or custom multisig in this slice (§18.2). Do not renounce at launch.
 
 ### 3.3 14-day delay on Grave, not `TimelockController`
 
@@ -99,13 +98,13 @@ setReaper(address reaper_) onlyOwner, once
 
 `harvest()` reverts until `setReaper` succeeds. `bury()` works before Reaper is set (idle ETH, same as W2). There is no standing `setReaper` after the lock. Emit `ReaperSet(address indexed reaper)` (not in spec §13’s minimum list; same role as NETH `GraveSet` for W6 post-deploy checks).
 
-### 3.5 Pause lives on Grave; Reaper reads it
+### 3.5 No pause on Grave or Reaper
 
-Spec §6.5: pause MAY stop new strategy deposits, harvests, migrations, and Reaper auction **creation**. It MUST NOT pause ERC-20 transfers or enable principal withdrawal. [`NIP-0005`](0005-reaper.md) left two options: Pausable on Reaper, or Reaper reads a Grave flag.
+Spec §6.5 pause is MAY. [`NDR-0005`](../ndr/0005-strategy-security.md): do not pause Reaper (if it has ETH, it should spend it; pause does not restore yield). Do not put pause on Grave. Investing stop, if any, is adapter-specific and not part of `IStrategyAdapter`.
 
-Reaper has no other admin. Putting `Ownable`/`Pausable` on Reaper would invent a second pauser. Grave already has the admin. OpenZeppelin `Pausable` on Grave exposes `paused()`. `Reaper.startAuction` reverts when `grave.paused()`.
+Do not add `Pausable` to Grave or Reaper. Do not check `grave.paused()` in `startAuction`. Spec §13 `EmergencyPause` / `EmergencyUnpause` are not Grave events in this slice.
 
-`sellToReaper` and `finalizeAuction` stay live during pause (creation only). `bury()` stays live; when paused it does not call `depositETH` (ETH remains idle on Grave).
+If `depositETH` reverts, `bury()` still succeeds and leaves ETH idle (no pause escape hatch).
 
 ### 3.6 Immediate harvest transfer; `alreadyReservedForReaper` is not stored
 
@@ -176,7 +175,7 @@ Do not add `onlyOwner` on the mock beyond `onlyGrave` for the interface methods.
 
 ## 6. Grave surface
 
-File: `contracts/src/Grave.sol`. Inherit OpenZeppelin `ReentrancyGuard` (already), `Ownable2Step`, and `Pausable` ([`NIP-0001`](0001-scaffolding.md) §5).
+File: `contracts/src/Grave.sol`. Inherit OpenZeppelin `ReentrancyGuard` (already) and `Ownable2Step`. Do not inherit `Pausable`.
 
 ```text
 pragma solidity 0.8.36;
@@ -187,7 +186,6 @@ constructor(address neth_, address initialOwner_)
 neth() → NETH                              // unchanged immutable
 reaper() → address                         // address(0) until setReaper
 owner() / pendingOwner()                   // Ownable2Step
-paused() → bool                            // OZ Pausable; false at deploy
 
 currentEra / currentEraCapacity / currentEraBuried / currentRewardRate / quoteBury
 protectedPrincipal()                       // unchanged semantics
@@ -205,8 +203,8 @@ setReaper(address reaper_)                 // onlyOwner, one-time
 scheduleStrategy(address newAdapter)
 cancelScheduledStrategy()
 executeStrategyMigration()
-pause() / unpause()                        // onlyOwner; see §9
 transferOwnership / acceptOwnership        // Ownable2Step
+renounceOwnership()                        // available; W6 must not call it
 ```
 
 Constructor change: every existing `new Grave(neth)` becomes `new Grave(neth, admin)`. Update unit, fuzz, invariant, and Reaper tests that construct Grave. Era math and burial numbers must stay identical when `activeStrategy() == address(0)`.
@@ -223,15 +221,15 @@ OpenZeppelin 5.x `Ownable` takes `initialOwner` in the constructor. `Ownable2Ste
 | `pendingStrategy()` | scheduled adapter and `executeAfter`; zeroed when none |
 | `reaper()` | harvest recipient; `address(0)` until `setReaper` |
 
-If the adapter reverts on `totalAssetsInETH()`, `currentNAV` / `harvestableYield` revert. That is a broken adapter; pause and migrate. Do not cache NAV.
+If the adapter reverts on `totalAssetsInETH()`, `currentNAV` / `harvestableYield` revert. That is a broken adapter; migrate. Do not cache NAV.
 
 ### 6.2 `bury()` and strategy deposit
 
 Burial accounting is unchanged ([`NIP-0004`](0004-grave.md) §4.2): `minNethOut`, `protectedPrincipal += msg.value`, mint, `EraCompleted` / `Buried`, CEI before `neth.mint`.
 
-After mint, if `activeStrategy != address(0)` and `!paused()`, deposit **all** idle ETH (`address(this).balance`) via `adapter.depositETH{value: idle}()`. Emit `StrategyDeposit(strategy, idle)`. If that call reverts, the whole `bury()` reverts (adapter DoS). Admin pauses; `bury()` then succeeds and leaves ETH idle.
+After mint, if `activeStrategy != address(0)`, try to deposit **all** idle ETH (`address(this).balance`) via `adapter.depositETH{value: idle}()`. On success, emit `StrategyDeposit(strategy, idle)`. On revert, leave ETH idle on Grave and still complete `bury()` ([`NDR-0005`](../ndr/0005-strategy-security.md): no pause escape). Mint and principal accounting must already be done (CEI).
 
-When paused or no adapter, ETH stays on Grave (W2 behavior). Donations received while an adapter is active sit idle until the next unpaused `bury()` or a migration execute, which sweep idle into the adapter. Do not add a permissionless `deployIdle()` (not in the spec).
+When no adapter, ETH stays on Grave (W2 behavior). Donations received while an adapter is active sit idle until the next successful deposit-on-bury or a migration execute. Do not add a permissionless `deployIdle()` (not in the spec).
 
 ### 6.3 Custom errors and events
 
@@ -250,10 +248,9 @@ NoPendingStrategy()
 StrategyDelayNotElapsed(uint256 executeAfter)
 InvalidStrategy()
 SameStrategy()
-OwnershipRenouncedDisabled()
 ```
 
-OZ `OwnableUnauthorizedAccount`, `EnforcedPause`, and `ReentrancyGuardReentrantCall` apply as usual.
+OZ `OwnableUnauthorizedAccount` and `ReentrancyGuardReentrantCall` apply as usual.
 
 Spec §13 events to emit from Grave (Reaper events stay on Reaper):
 
@@ -264,8 +261,6 @@ event StrategyDeposit(address indexed strategy, uint256 ethAmount);
 event YieldHarvested(uint256 ethAmount, uint256 reaperBalance);
 event StrategyMigrationScheduled(address indexed oldStrategy, address indexed newStrategy, uint256 executeAfter);
 event StrategyMigrated(address indexed oldStrategy, address indexed newStrategy, uint256 navBefore, uint256 navAfter);
-event EmergencyPause(address indexed account);
-event EmergencyUnpause(address indexed account);
 ```
 
 Also emit (not in the §13 minimum list):
@@ -275,7 +270,7 @@ event ReaperSet(address indexed reaper);
 event StrategyMigrationCancelled(address indexed oldStrategy, address indexed newStrategy);
 ```
 
-`pause()` / `unpause()` MUST emit `EmergencyPause` / `EmergencyUnpause` as specified. OZ `Paused` / `Unpaused` may also fire from `_pause` / `_unpause`; do not omit the spec names.
+Do not emit `EmergencyPause` / `EmergencyUnpause` from Grave ([`NDR-0005`](../ndr/0005-strategy-security.md)).
 
 ## 7. Harvest
 
@@ -283,7 +278,7 @@ event StrategyMigrationCancelled(address indexed oldStrategy, address indexed ne
 function harvest() external nonReentrant returns (uint256 ethHarvested);
 ```
 
-Anyone may call it when not paused, Reaper is set, and there is positive harvestable yield that can be realized as ETH (spec §7). Production keeper incentive is zero: no tip parameter, no payment from principal.
+Anyone may call it when Reaper is set, and there is positive harvestable yield that can be realized as ETH (spec §7). Production keeper incentive is zero: no tip parameter, no payment from principal.
 
 ### 7.1 Amount
 
@@ -364,14 +359,14 @@ Spec §11’s admin component includes propose/cancel. Spec §16.1 requires test
 2. Emit `StrategyMigrationCancelled(activeStrategy, pending)`.
 3. Clear the pending slot.
 
-Pause still blocks `executeStrategyMigration` during the delay. Cancel is how a recovered admin clears a bad schedule and posts another (new 14-day clock).
+Cancel is how a recovered admin clears a bad schedule and posts another (new 14-day clock). There is no Grave pause to freeze execute; refusing to call execute, or cancelling, is the delay-window response.
 
-### 8.3 `executeStrategyMigration()` (`onlyOwner`, `nonReentrant`, when not paused)
+### 8.3 `executeStrategyMigration()` (`onlyOwner`, `nonReentrant`)
 
 One transaction. A revert undoes storage writes and native-ETH sends.
 
 ```text
-require owner, !paused, pending set, block.timestamp >= executeAfter
+require owner, pending set, block.timestamp >= executeAfter
 old = activeStrategy; new = pending adapter
 navBefore = currentNAV()
 if old != 0: try/catch withdrawETH(old.totalAssetsInETH(), address(this))
@@ -402,38 +397,27 @@ Post-migration verification (spec §6.5):
 - no skipping the 14-day delay, including for the first adapter
 - no executing a different address than the one scheduled
 
-## 9. Emergency pause
+## 9. No protocol pause
 
-```text
-pause()   onlyOwner → _pause(); emit EmergencyPause(msg.sender)
-unpause() onlyOwner → _unpause(); emit EmergencyUnpause(msg.sender)
-```
+Grave and Reaper have no `pause` / `unpause`. Spec §6.5 MAY is unused here ([`NDR-0005`](../ndr/0005-strategy-security.md)).
 
-While paused:
-
-| Operation | Allowed? |
+| Operation | Always allowed (subject to its own checks) |
 |---|---|
-| `bury()` | yes; skip `depositETH` |
-| NETH `transfer` / `approve` / `burn` | yes (no `ERC20Pausable`) |
+| `bury()` | yes; `depositETH` try/catch — idle on revert |
+| NETH `transfer` / `approve` / `burn` | yes |
+| `harvest()` | yes, when harvestable ETH is realizable |
+| `executeStrategyMigration()` | yes, after 14 days, `onlyOwner` |
+| `Reaper.startAuction` | yes, when `availableReaperETH > 0` |
 | `sellToReaper` / `finalizeAuction` | yes |
-| `harvest()` | no |
-| `depositETH` from Grave (bury or migrate) | no |
-| `executeStrategyMigration()` | no |
-| `scheduleStrategy` / `cancelScheduledStrategy` | yes (admin can still post or clear a schedule) |
-| `Reaper.startAuction` | no (`grave.paused()`) |
 | principal `withdraw` | no such function exists |
-
-Unpause does not auto-sweep idle ETH; the next unpaused `bury()` or migration execute does.
 
 ## 10. Reaper change
 
-File: `contracts/src/Reaper.sol`. Do not add `Ownable`, `Pausable`, harvest, or a strategy slot.
+File: `contracts/src/Reaper.sol`. Do not add `Ownable`, `Pausable`, harvest, a strategy slot, or a `grave.paused()` check.
 
-`startAuction` (after `_collectSurplus`, before allocating budget): if `grave.paused()`, revert (`AuctionCreationPaused` or equivalent). Grave must expose `paused()` (OZ `Pausable`).
+W4 harvest already works: Grave sends ETH; `receive()` credits `msg.sender == grave`. Do not change auction math.
 
-Do not pause `sellToReaper`, `finalizeAuction`, `collectSurplus`, or `receive`. Do not add `pause()` on Reaper.
-
-Existing Reaper tests keep passing when Grave is unpaused (default). Update Grave constructor arguments in those tests. Keep asserting Reaper itself has no `pause` / `owner` / `harvest` / `withdraw`.
+Existing Reaper tests: update Grave constructor arguments (`initialOwner`). Keep asserting Reaper itself has no `pause` / `owner` / `harvest` / `withdraw`. `startAuction` must succeed while a hypothetical caller might have wanted Grave paused — there is no such flag.
 
 ## 11. What W4 must not do
 
@@ -442,7 +426,8 @@ Spec §2, §6, §10, §16, §20:
 - no ETH redemption, `withdraw` of principal to burier or admin
 - no admin mint of NETH; owner cannot call `neth.mint`
 - no pause of ordinary ERC-20 transfers
-- no spending protected principal via harvest, pause, or migration
+- no `Pausable` on Grave or Reaper; no `startAuction` pause check
+- no spending protected principal via harvest or migration
 - no redirect of Reaper ETH
 - no `TimelockController` / extra `StrategyManager` deploy in this slice
 - no production adapter in `src/strategy/`
@@ -461,8 +446,8 @@ Follow [`NIP-0001`](0001-scaffolding.md). Production adapter directory stays emp
 contracts/
 ├── src/
 │   ├── NETH.sol                         unchanged
-│   ├── Grave.sol                        extended (harvest, strategy slot, pause, owner)
-│   ├── Reaper.sol                       startAuction checks grave.paused()
+│   ├── Grave.sol                        extended (harvest, strategy slot, owner)
+│   ├── Reaper.sol                       unchanged auction math; harvest already via receive()
 │   ├── interfaces/
 │   │   └── IStrategyAdapter.sol         unchanged (§6.4)
 │   ├── libraries/
@@ -472,17 +457,17 @@ contracts/
     ├── unit/
     │   ├── NETH.t.sol                   unchanged
     │   ├── EraMath.t.sol                unchanged
-    │   ├── Grave.t.sol                  constructor + bury-without-strategy still valid; drop “no harvest/pause/owner”
-    │   ├── Reaper.t.sol                 Grave constructor; startAuction pause case
-    │   └── Strategy.t.sol               harvest, migration, pause, test adapter
+    │   ├── Grave.t.sol                  constructor + bury-without-strategy still valid; harvest/owner exist; pause absent
+    │   ├── Reaper.t.sol                 Grave constructor only
+    │   └── Strategy.t.sol               harvest, migration, test adapter
     ├── fuzz/
     │   ├── Grave.t.sol                  constructor; principal properties still hold
     │   ├── Reaper.t.sol                 constructor
     │   └── Strategy.t.sol
     ├── invariant/
     │   ├── Grave.t.sol                  no-strategy handler still valid (update Grave ctor)
-    │   ├── Reaper.t.sol                 update Grave ctor; optional pause selector
-    │   └── Strategy.t.sol               bury, harvest, donate, pause, schedule/cancel/execute, adapter P/L, auctions
+    │   ├── Reaper.t.sol                 update Grave ctor
+    │   └── Strategy.t.sol               bury, harvest, donate, schedule/cancel/execute, adapter P/L, auctions
     └── mocks/
         ├── GraveStub.sol                unchanged
         └── TestInvestAdapter.sol
@@ -495,7 +480,7 @@ Suggested Grave internals (reshape as needed):
 ```text
 _idleETH() → uint256
 _strategyAssets() → uint256
-_deployIdle()                         // deposit address(this).balance when adapter set and !paused
+_deployIdle()                         // deposit address(this).balance when adapter set; catch revert
 _realizeHarvest() → uint256           // §7.1; one path for harvest()
 _collectFromAdapter(uint256 amount) → uint256 received
 ```
@@ -504,7 +489,7 @@ _collectFromAdapter(uint256 amount) → uint256 received
 
 Spec §17: tests that introduce the behavior ship with the slice. W4 does not run Base fork tests or the production-adapter suite (W5). Existing burial/Reaper suites must stay green after the Grave constructor change.
 
-Replace `Grave.t.sol` `test_noWithdrawRedeemHarvestPauseOrOwner` with: no `withdraw` / `redeem` / `unstake`; `harvest`, `pause`, and `owner` **do** exist. Keep “no withdraw of principal”.
+Replace `Grave.t.sol` `test_noWithdrawRedeemHarvestPauseOrOwner` with: no `withdraw` / `redeem` / `unstake` / `pause` / `unpause`; `harvest` and `owner` **do** exist. Keep “no withdraw of principal”.
 
 When `activeStrategy() == address(0)`, `currentNAV() == address(this).balance` as in W2. Invariant `currentNAV >= protectedPrincipal` remains true **without** a loss-making adapter; the strategy invariant handler must **not** assert that globally (spec §6.3).
 
@@ -512,11 +497,11 @@ When `activeStrategy() == address(0)`, `currentNAV() == address(this).balance` a
 
 Wiring:
 
-- genesis: `activeStrategy() == 0`, `reaper() == 0`, `paused() == false`, `owner() == admin`
+- genesis: `activeStrategy() == 0`, `reaper() == 0`, `owner() == admin`; no `paused()`
 - `setReaper` reverts for zero, EOA, second call, and non-owner; after success `ReaperSet` and harvest path works
 - `harvest` before `setReaper` reverts
-- `transferOwnership` / `acceptOwnership`; `renounceOwnership` reverts
-- non-owner cannot `pause`, `scheduleStrategy`, `executeStrategyMigration`, `setReaper`
+- `transferOwnership` / `acceptOwnership`; `renounceOwnership` succeeds in a unit test (owner becomes 0) but W6 must not use it
+- non-owner cannot `scheduleStrategy`, `executeStrategyMigration`, `setReaper`
 
 NAV and harvest:
 
@@ -533,9 +518,8 @@ NAV and harvest:
 
 Deposit on bury:
 
-- with adapter set and unpaused, `bury` leaves Grave idle ~0 and adapter `totalAssetsInETH` increased; `StrategyDeposit` emitted
-- paused: `bury` succeeds, ETH stays on Grave, no `depositETH`
-- reverting adapter: `bury` reverts until pause
+- with adapter set, `bury` leaves Grave idle ~0 and adapter `totalAssetsInETH` increased; `StrategyDeposit` emitted
+- reverting adapter: `bury` still mints and raises principal; ETH stays idle on Grave
 
 Scheduling / migration:
 
@@ -548,14 +532,7 @@ Scheduling / migration:
 - `navAfter < navBefore` allowed (loss during migration)
 - reverting old `withdrawETH`: execute continues (best effort); ETH stuck in the old adapter is missing from NAV; owner balance unchanged
 - scheduled address is the one executed; cannot swap in a different adapter at execute
-- pause blocks execute; does not block schedule/cancel
 - no path sends recovered ETH to `owner()`
-
-Pause:
-
-- `pause` emits `EmergencyPause`; `harvest` reverts; `startAuction` reverts; `sellToReaper` still works if an auction was already active; `bury` still works
-- `unpause` emits `EmergencyUnpause`
-- NETH transfer / `approve` / holder `burn` work while paused
 
 Test adapter:
 
@@ -566,7 +543,7 @@ Test adapter:
 Absence:
 
 - no `withdraw(uint256)` / `redeem` / `unstake` on Grave
-- no pause functions on NETH or Reaper
+- no pause functions on Grave, NETH, or Reaper
 - no harvest fee / tip parameter
 
 ### 13.2 Fuzz / property
@@ -579,7 +556,7 @@ harvest never sends idle ETH that is required as principal (§7.1)
 post-successful-harvest currentNAV >= protectedPrincipal for an honest adapter
 Reaper can never spend Grave principal
 no admin path can mint NETH
-owner / pause / migration cannot transfer principal to owner
+owner / migration cannot transfer principal to owner
 schedule cannot be executed before 14 days
 executed adapter == scheduled adapter
 only one activeStrategy
@@ -588,11 +565,11 @@ quoteBury(eth) == bury output at the same pre-state
 era reward rate never increases
 ```
 
-Assume callers, amounts, warps across the 14-day delay, pause toggles, adapter profit/loss, and NAV-override lies (withdraw still capped by real ETH).
+Assume callers, amounts, warps across the 14-day delay, adapter profit/loss, and NAV-override lies (withdraw still capped by real ETH).
 
 ### 13.3 Invariant (`test/invariant/Strategy.t.sol`)
 
-Stateful handler: random `bury`, donations to Grave and Reaper, `harvest`, `startAuction` / `sellToReaper` / `finalizeAuction`, `pause` / `unpause`, `scheduleStrategy` / `cancelScheduledStrategy` / `executeStrategyMigration` (with warps), and test-adapter `simulateProfit` / `simulateLoss` / `setReportedNav`.
+Stateful handler: random `bury`, donations to Grave and Reaper, `harvest`, `startAuction` / `sellToReaper` / `finalizeAuction`, `scheduleStrategy` / `cancelScheduledStrategy` / `executeStrategyMigration` (with warps), and test-adapter `simulateProfit` / `simulateLoss` / `setReportedNav`.
 
 Invariants: §13.2 properties that remain globally true, plus `neth.balanceOf(reaper) == 0` except inside settlement, and `protectedPrincipal` equals cumulative successful `bury` `msg.value`. Do **not** assert `currentNAV >= protectedPrincipal` once loss actions are in the handler.
 
@@ -622,10 +599,10 @@ Existing CI already runs `forge fmt --check`, `forge build --sizes`, and `forge 
 
 Do not run these until this NIP is explicitly started.
 
-1. Extend `contracts/src/Grave.sol` as in §6–§9: `Ownable2Step`, `Pausable`, `setReaper`, harvest, schedule/cancel/execute, deposit-on-bury. `pragma solidity 0.8.36;`. SPDX `UNLICENSED` ([NDR-0004](../ndr/0004-source-available-until-mainnet.md)). Import `IStrategyAdapter`; do not import `Reaper.sol` (send ETH to the stored address).
-2. Add `grave.paused()` check to `Reaper.startAuction`. Do not add owner/pause on Reaper.
+1. Extend `contracts/src/Grave.sol` as in §6–§9: `Ownable2Step`, `setReaper`, harvest, schedule/cancel/execute, deposit-on-bury with try/catch. `pragma solidity 0.8.36;`. SPDX `UNLICENSED` ([NDR-0004](../ndr/0004-source-available-until-mainnet.md)). Import `IStrategyAdapter`; do not import `Reaper.sol` (send ETH to the stored address). Do not add `Pausable`.
+2. Do not change `Reaper.startAuction`. Do not add owner/pause on Reaper.
 3. Add `contracts/test/mocks/TestInvestAdapter.sol` as in §5.
-4. Update every `new Grave(neth)` to `new Grave(neth, admin)` in existing tests. Adjust the Grave unit test that asserted harvest/pause/owner were absent.
+4. Update every `new Grave(neth)` to `new Grave(neth, admin)` in existing tests. Adjust the Grave unit test that asserted harvest/pause/owner were absent: harvest/owner exist; pause does not.
 5. Add unit, fuzz, invariant, and §15.3 tests in §13.
 6. Do not change `NETH.sol`, `EraMath.sol`, `IStrategyAdapter.sol`, `foundry.toml`, remappings, OpenZeppelin/forge-std pins, or CI versions. Leave `src/strategy/` empty.
 7. From `contracts/`: `forge fmt`, `forge build`, `forge test`.
@@ -641,8 +618,8 @@ W4 is done when:
 - loss-recovery-first holds on the test adapter
 - donations / forced ETH do not mint and do not raise `protectedPrincipal`; they may become harvestable only as NAV surplus
 - strategy changes are scheduled on-chain, wait 14 days, execute only the scheduled adapter, and route recovered ETH Grave → new adapter, never to admin
-- pause stops harvest, new strategy deposits, migration execute, and `startAuction`, and does not pause NETH transfers or `sellToReaper`
-- Grave admin is `Ownable2Step`; Reaper and NETH have no owner; `renounceOwnership` on Grave reverts
+- pause is absent on Grave and Reaper; `startAuction` does not read a Grave pause flag
+- Grave admin is `Ownable2Step`; Reaper and NETH have no owner; `renounceOwnership` remains available (W6 must not call it)
 - `NETH.sol` and `EraMath.sol` are unchanged; `src/strategy/` is still empty
 - `forge fmt --check`, `forge build`, and `forge test` pass from `contracts/`
 - NDR-0002 is still Proposed unless it is explicitly accepted in a later change
@@ -657,7 +634,8 @@ Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md)
 - CREATE2, cost script, explorer verification (W6)
 - accepting the compiler / OZ / Foundry freeze (NDR-0002)
 - keeper language / runtime (W8)
+- later safer meta-adapter internals and the moment Grave owner is set to `address(0)` ([`NDR-0005`](../ndr/0005-strategy-security.md))
 
-No new NDR is required for this plan. Strategy slot on Grave, harvest-with-W4, test invest adapter, and pause-of-auction-creation are already in [`NIP-0000`](0000-the-roadmap.md). `IStrategyAdapter` is spec §6.4. 14-day delay, yield-only Reaper, loss-recovery-first, and pause limits are spec §6–§7 / §10 / §21. One-time `setReaper` matches the §18.3 deploy order and the NETH `setGrave` shape. `Ownable2Step` / `Pausable` are the modules [`NIP-0001`](0001-scaffolding.md) reserved for W4. Embedded delay rather than `TimelockController` follows spec §18.2 and NIP-0001 §5. Immediate harvest transfer is spec §6.2’s `alreadyReservedForReaper` after ETH has left Grave. Cancel of a pending schedule is spec §11 propose/cancel plus §16.1 key-compromise / thief-adapter tests.
+Pause-of-auction-creation is **not** in this slice ([`NDR-0005`](../ndr/0005-strategy-security.md)). Strategy slot on Grave, harvest-with-W4, and the test invest adapter are already in [`NIP-0000`](0000-the-roadmap.md). `IStrategyAdapter` is spec §6.4. 14-day delay, yield-only Reaper, and loss-recovery-first are spec §6–§7 / §10 / §21. One-time `setReaper` matches the §18.3 deploy order and the NETH `setGrave` shape. `Ownable2Step` is the module [`NIP-0001`](0001-scaffolding.md) reserved for W4; `Pausable` is not. Embedded delay rather than `TimelockController` follows spec §18.2 and NIP-0001 §5. Immediate harvest transfer is spec §6.2’s `alreadyReservedForReaper` after ETH has left Grave. Cancel of a pending schedule is spec §11 propose/cancel plus §16.1 key-compromise / thief-adapter tests.
 
-W5 implements `src/strategy/` against this same interface. W6 transfers `owner()` off the deployer EOA and must not stack a second 14-day `TimelockController` on top of Grave’s delay.
+W5 implements `src/strategy/` against this same interface. W6 transfers `owner()` off the deployer EOA and must not stack a second 14-day `TimelockController` on top of Grave’s delay, and must not `renounceOwnership` at launch.
