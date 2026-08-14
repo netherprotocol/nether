@@ -7,10 +7,6 @@ contract MockWETH9 {
 
     error TransferFailed();
 
-    function mint(address to, uint256 amount) external {
-        balanceOf[to] += amount;
-    }
-
     function deposit() external payable {
         balanceOf[msg.sender] += msg.value;
     }
