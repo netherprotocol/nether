@@ -101,8 +101,8 @@ Production contracts arrive in later workstreams, as separate files, matching sp
 | File | Workstream | Notes |
 |---|---|---|
 | `src/NETH.sol` | W1 | OZ ERC-20 + burn; Grave-only mint. Plan: [`NIP-0003`](0003-neth.md) |
-| `src/Grave.sol` | W2, then W4 | Burial/eras first; harvest and strategy slot later |
-| `src/libraries/EraMath.sol` | W2 | Pure library |
+| `src/Grave.sol` | W2, then W4 | Burial/eras first; harvest and strategy slot later. Plan: [`NIP-0004`](0004-grave.md) |
+| `src/libraries/EraMath.sol` | W2 | Pure library. Plan: [`NIP-0004`](0004-grave.md) |
 | `src/Reaper.sol` | W3 | Reverse Dutch auction |
 | `src/interfaces/IStrategyAdapter.sol` | W0 (stub), W4 (used) | Exact §6.4 surface |
 | `src/strategy/*` | W5 | Production adapter after its NDR |
