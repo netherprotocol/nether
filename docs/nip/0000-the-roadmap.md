@@ -37,7 +37,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 | 2 | `$NETH` ERC-20 | **W1** | [`NIP-0003`](0003-neth.md); Grave-only mint (§11) |
 | 3 | Burying ETH, Grave, reckoning, eras | **W2** | [`NIP-0004`](0004-grave.md); era math library split out; reckoning = `EraCompleted` |
 | 4 | Reaper reverse Dutch auction | **W3** | [`NIP-0005`](0005-reaper.md); independent of the first production adapter |
-| 5 | Investment interface, yield to Reaper, strategy governance | **W4** | Harvest, pause, timelock, **test invest adapter** |
+| 5 | Investment interface, yield to Reaper, strategy governance | **W4** | Harvest, timelock, **test invest adapter**. Pause is not on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)) |
 | 6 | AAVE pool for MVP | **W5** | Most probable; specific choice TBD with NDR |
 | 7 | Landing site and dashboard | **W7** | Two surfaces, one workstream; FE stack [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
 | 8 | Grave Keeper (cranker) bot | **W8** | Pair with observability |
@@ -117,10 +117,10 @@ Internal breakdown:
 2. **Test invest adapter** (approved split): idle ETH or a scripted profit/loss adapter for unit, fuzz, and invariant tests so M0 does not depend on AAVE. Do not deploy it on mainnet (§18.2). Place it under `contracts/test/`, not `contracts/src/`.
 3. Protected-principal high-watermark accounting, `harvest()`, loss-recovery-first, donation/forced-ETH handling (§6.2–§6.3, §7, §16.2).
 4. Strategy scheduling, 14-day timelock, migration that routes recovered assets through the Grave into the new adapter, post-migration NAV check.
-5. Emergency pause of strategy-sensitive operations, harvests, migrations, and Reaper auction creation — not ERC-20 transfers, and not principal withdrawal.
-6. Multisig-capable admin using existing audited Base infrastructure where possible; production ownership must leave the deployer EOA (§10.2, §18).
+5. No emergency pause on Grave or Reaper (spec §6.5 is MAY). Grave admin is strategy replacement only; investing pause, if any, lives on the adapter ([`NDR-0005`](../ndr/0005-strategy-security.md)).
+6. Multisig-capable admin using existing audited Base infrastructure where possible; production ownership must leave the deployer EOA (§10.2, §18). Do not renounce at launch.
 
-Admin authority is strategy replacement (timelocked) and emergency pause only. It is not upgradeability of NETH, Grave, or Reaper.
+Admin authority is strategy replacement (timelocked) only. It is not upgradeability of NETH, Grave, or Reaper, and it is not pause of harvest or Reaper auctions.
 
 ### W5 — Initial production strategy (AAVE candidate)
 
@@ -174,7 +174,7 @@ Keeper loop (minimum):
 
 The keeper lives under `apps/keeper/` with its own environment. Language and runtime are TBD when W8 starts; record that choice as an NDR then.
 
-Observability (§19) belongs with this workstream: issuance and burn history, NAV, harvests, auctions, strategy address changes, and alerts (NAV below principal, pause, role changes, harvest failures, migration schedule). M3 is the production hardening of this surface.
+Observability (§19) belongs with this workstream: issuance and burn history, NAV, harvests, auctions, strategy address changes, and alerts (NAV below principal, role changes, harvest failures, migration schedule, and adapter pause if a later adapter has one). M3 is the production hardening of this surface.
 
 Indexer technology is still TBD; record it in an NDR when W8 needs one. Do not couple it to NDR-0003.
 
@@ -214,7 +214,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 
 | Topic | Decision |
 |---|---|
-| Upgradeability | None for now. Follow the spec: NETH, Grave, and Reaper are immutable at deploy. Admin is strategy timelock + emergency pause only. Sepolia may iterate by redeploy. |
+| Upgradeability | None for now. Follow the spec: NETH, Grave, and Reaper are immutable at deploy. Admin is strategy timelock only; no Grave/Reaper pause ([`NDR-0005`](../ndr/0005-strategy-security.md)). Sepolia may iterate by redeploy. |
 | Reckoning | The era-change event: `EraCompleted` when an era fills (including mid-`bury()` boundary crossings). Not NAV, harvest, or Reaper settlement. See [`NIP-0004`](0004-grave.md). |
 | Initial strategy | AAVE is the most probable MVP adapter. Specific deployment/pool/NAV details TBD in an NDR before W5 code. |
 | Reaper minimum budget | None. Leftover pre-1.0 wording in the spec was cleaned to match §21. See [`NIP-0005`](0005-reaper.md). |
@@ -225,13 +225,14 @@ These answers are from review of the draft. They are recorded here so the plan s
 | Toolchain versions | Proposed in [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md); not frozen until that NDR is accepted. |
 | This plan | Living NIP. Adjust on demand. Do not copy it into an NDR. |
 | Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. W2 plan: [`NIP-0004`](0004-grave.md). |
+| Strategy replacement security | v1: owner + 14-day delay, no Grave/Reaper pause; later safer adapter then `owner → 0`. [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). |
 
 Nearby setup authority that is *not* monetary upgradeability, and is already in the spec:
 
 - one-time mint-authority wiring from deployer to Grave
 - strategy adapter replacement via timelock
-- emergency pause/unpause of strategy-sensitive operations
 - transferring admin from deployer to a multisig-capable account
+- later (not at launch): Grave owner to `address(0)` after a safer adapter, per [`NDR-0005`](../ndr/0005-strategy-security.md)
 
 ## 6. NDR queue
 
@@ -241,6 +242,7 @@ Do not accept these until the question is actually being decided. A Proposed rec
 |---|---|---|
 | Compiler / OZ / Foundry version freeze | M2 (can wait until late M0) | Spec §18.3. Draft: [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (Proposed) |
 | `IStrategyAdapter` surface change, if any | W4 | Only if the spec interface is insufficient |
+| Strategy replacement security (owner theft vs later proxy) | W4 locked; later NIP for the proxy | [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). Not the W5 venue NDR |
 | Initial production strategy (AAVE candidate) | W5 | Required; AAVE is probable, not accepted |
 | Frontend framework | W7 landing | [`NDR-0003`](../ndr/0003-frontend-stack.md) (Accepted). Plan: [`NIP-0002`](0002-landing-docs.md) |
 | Indexer | W8 | Still TBD; live views can use §12 + RPC without one |
@@ -255,10 +257,10 @@ Routine mechanical work (typos, tests that restore documented behavior) does not
 W0 scaffold
  └─ W1 NETH ([`NIP-0003`](0003-neth.md))
      ├─ W2 Grave ([`NIP-0004`](0004-grave.md); era math library → bury → reckoning / EraCompleted → idle ETH)
-     │    └─ W4 strategy interface, harvest, timelock, pause, test invest adapter
+     │    └─ W4 strategy interface, harvest, timelock, test invest adapter
      │         └─ W5 production adapter (after NDR)
      └─ W3 Reaper ([`NIP-0005`](0005-reaper.md); can overlap W2 once NETH exists)
-            └─ W4 harvest credits Reaper; pause includes auction creation
+            └─ W4 harvest credits Reaper (no pause of auction creation)
 
 M0 gate: W1–W5 tests, invariants, economic sim, Base fork tests
  ├─ W6 Sepolia deploy kit
