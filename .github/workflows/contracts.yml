@@ -22,7 +22,6 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.7.1
-          token: ${{ secrets.GITHUB_TOKEN }}
       - run: forge fmt --check
       - run: forge build --sizes
       - run: forge test -vvv
