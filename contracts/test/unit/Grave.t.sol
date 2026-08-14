@@ -100,10 +100,10 @@ contract GraveTest is Test {
     }
 
     function test_buryEraZeroOneEth() public {
-        vm.expectEmit(true, true, false, true, address(neth));
-        emit Transfer(address(0), alice, 1_000_000 ether);
         vm.expectEmit(true, false, false, true, address(grave));
         emit Buried(alice, 1 ether, 1_000_000 ether, 0);
+        vm.expectEmit(true, true, false, true, address(neth));
+        emit Transfer(address(0), alice, 1_000_000 ether);
 
         vm.prank(alice);
         uint256 nethOut = grave.bury{value: 1 ether}(0);
