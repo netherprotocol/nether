@@ -47,24 +47,25 @@ contract AaveV3WethAdapterTest is Test {
 
     function test_constructorRevertsZeroAndEoa() public {
         address eoa = makeAddr("eoa");
+        address aWeth = address(pool.aToken());
 
         vm.expectRevert(AaveV3WethAdapter.ZeroAddress.selector);
-        new AaveV3WethAdapter(address(0), address(provider), address(weth), address(pool.aToken()));
+        new AaveV3WethAdapter(address(0), address(provider), address(weth), aWeth);
 
         vm.expectRevert(AaveV3WethAdapter.NotContract.selector);
-        new AaveV3WethAdapter(eoa, address(provider), address(weth), address(pool.aToken()));
+        new AaveV3WethAdapter(eoa, address(provider), address(weth), aWeth);
 
         vm.expectRevert(AaveV3WethAdapter.ZeroAddress.selector);
-        new AaveV3WethAdapter(address(this), address(0), address(weth), address(pool.aToken()));
+        new AaveV3WethAdapter(address(this), address(0), address(weth), aWeth);
 
         vm.expectRevert(AaveV3WethAdapter.NotContract.selector);
-        new AaveV3WethAdapter(address(this), eoa, address(weth), address(pool.aToken()));
+        new AaveV3WethAdapter(address(this), eoa, address(weth), aWeth);
 
         vm.expectRevert(AaveV3WethAdapter.ZeroAddress.selector);
-        new AaveV3WethAdapter(address(this), address(provider), address(0), address(pool.aToken()));
+        new AaveV3WethAdapter(address(this), address(provider), address(0), aWeth);
 
         vm.expectRevert(AaveV3WethAdapter.NotContract.selector);
-        new AaveV3WethAdapter(address(this), address(provider), eoa, address(pool.aToken()));
+        new AaveV3WethAdapter(address(this), address(provider), eoa, aWeth);
 
         vm.expectRevert(AaveV3WethAdapter.ZeroAddress.selector);
         new AaveV3WethAdapter(address(this), address(provider), address(weth), address(0));
@@ -74,15 +75,17 @@ contract AaveV3WethAdapterTest is Test {
     }
 
     function test_constructorRevertsInvalidPoolAndAToken() public {
+        address aWeth = address(pool.aToken());
         MockPoolAddressesProvider zeroPool = new MockPoolAddressesProvider(address(0));
         vm.expectRevert(AaveV3WethAdapter.InvalidPool.selector);
-        new AaveV3WethAdapter(address(this), address(zeroPool), address(weth), address(pool.aToken()));
+        new AaveV3WethAdapter(address(this), address(zeroPool), address(weth), aWeth);
 
         MockAToken mismatchedPool = new MockAToken(address(weth), address(weth));
         vm.expectRevert(AaveV3WethAdapter.InvalidPool.selector);
         new AaveV3WethAdapter(address(this), address(provider), address(weth), address(mismatchedPool));
 
-        MockAToken mismatchedUnderlying = new MockAToken(address(pool), makeAddr("notWeth"));
+        address notWeth = makeAddr("notWeth");
+        MockAToken mismatchedUnderlying = new MockAToken(address(pool), notWeth);
         vm.expectRevert(AaveV3WethAdapter.InvalidAToken.selector);
         new AaveV3WethAdapter(address(this), address(provider), address(weth), address(mismatchedUnderlying));
     }
@@ -212,7 +215,7 @@ contract AaveV3WethAdapterTest is Test {
         adapter.depositETH{value: 2 ether}();
         assertEq(adapter.totalAssetsInETH(), pool.aToken().balanceOf(address(adapter)));
         uint256 ethBefore = address(adapter).balance;
-        pool.simulateInterest(address(adapter), 0.5 ether);
+        pool.simulateInterest{value: 0.5 ether}(address(adapter), 0.5 ether);
         assertEq(adapter.totalAssetsInETH(), 2.5 ether);
         assertEq(adapter.totalAssetsInETH(), pool.aToken().balanceOf(address(adapter)));
         assertEq(address(adapter).balance, ethBefore);
@@ -279,6 +282,7 @@ contract AaveV3WethAdapterGraveTest is Test {
         adapter = new AaveV3WethAdapter(address(grave), address(provider), address(weth), address(pool.aToken()));
         vm.deal(alice, 10_000 ether);
         vm.deal(admin, 10_000 ether);
+        vm.deal(address(this), 10_000 ether);
     }
 
     function _activate(address strategy) internal {
@@ -323,7 +327,7 @@ contract AaveV3WethAdapterGraveTest is Test {
         vm.prank(alice);
         grave.bury{value: 2 ether}(0);
         uint256 principal = grave.protectedPrincipal();
-        pool.simulateInterest(address(adapter), 0.4 ether);
+        pool.simulateInterest{value: 0.4 ether}(address(adapter), 0.4 ether);
         assertEq(grave.harvestableYield(), 0.4 ether);
         uint256 harvested = grave.harvest();
         assertEq(harvested, 0.4 ether);

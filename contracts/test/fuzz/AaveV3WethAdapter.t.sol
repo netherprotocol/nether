@@ -47,7 +47,7 @@ contract AaveV3WethAdapterFuzzTest is Test {
         interest = bound(interest, 0, 40 ether);
         adapter.depositETH{value: d1}();
         adapter.depositETH{value: d2}();
-        pool.simulateInterest(address(adapter), interest);
+        pool.simulateInterest{value: interest}(address(adapter), interest);
         uint256 cumulative = d1 + d2 + interest;
         w1 = bound(w1, 0, cumulative);
         uint256 received = adapter.withdrawETH(w1, address(this));

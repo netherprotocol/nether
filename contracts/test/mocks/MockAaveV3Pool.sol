@@ -56,6 +56,7 @@ contract MockAaveV3Pool {
 
     error SupplyFailed();
     error WithdrawFailed();
+    error InterestValueMismatch();
 
     constructor(address weth_) {
         weth = MockWETH9(payable(weth_));
@@ -71,9 +72,14 @@ contract MockAaveV3Pool {
         withdrawReverts = value;
     }
 
-    function simulateInterest(address user, uint256 amount) external {
+    function simulateInterest(address user, uint256 amount) external payable {
+        if (msg.value != amount) {
+            revert InterestValueMismatch();
+        }
         aToken.mint(user, amount);
-        weth.mint(address(this), amount);
+        if (amount > 0) {
+            weth.deposit{value: amount}();
+        }
     }
 
     function simulateLoss(address user, uint256 amount) external {
