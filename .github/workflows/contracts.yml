@@ -47,4 +47,5 @@ jobs:
         working-directory: contracts
         env:
           BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
-        run: forge test --match-path 'test/fork/**' --fork-url "$BASE_RPC_URL" -vvv
+          FOUNDRY_PROFILE: fork
+        run: forge test --fork-url "$BASE_RPC_URL" -vvv
