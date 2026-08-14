@@ -1,6 +1,6 @@
 # NIP-0004: Grave — burial, eras, and reckoning
 
-- Status: Planned
+- Status: Implemented
 - Date: 2026-08-14
 - Workstream: W2
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
