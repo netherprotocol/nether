@@ -101,14 +101,14 @@ Production contracts arrive in later workstreams, as separate files, matching sp
 | File | Workstream | Notes |
 |---|---|---|
 | `src/NETH.sol` | W1 | OZ ERC-20 + burn; Grave-only mint. Plan: [`NIP-0003`](0003-neth.md) |
-| `src/Grave.sol` | W2, then W4 | Burial/eras first; harvest and strategy slot later. Plan: [`NIP-0004`](0004-grave.md) |
+| `src/Grave.sol` | W2, then W4 | Burial/eras first; harvest and strategy slot later. Plans: [`NIP-0004`](0004-grave.md), [`NIP-0006`](0006-strategy.md) |
 | `src/libraries/EraMath.sol` | W2 | Pure library. Plan: [`NIP-0004`](0004-grave.md) |
-| `src/Reaper.sol` | W3 | Reverse Dutch auction. Plan: [`NIP-0005`](0005-reaper.md) |
-| `src/interfaces/IStrategyAdapter.sol` | W0 (stub), W4 (used) | Exact §6.4 surface |
+| `src/Reaper.sol` | W3, then W4 pause check | Reverse Dutch auction. Plans: [`NIP-0005`](0005-reaper.md), [`NIP-0006`](0006-strategy.md) |
+| `src/interfaces/IStrategyAdapter.sol` | W0 (stub), W4 (used) | Exact §6.4 surface. Plan: [`NIP-0006`](0006-strategy.md) |
 | `src/strategy/*` | W5 | Production adapter after its NDR |
-| `test/mocks/*` | W4 | Test invest adapter only |
+| `test/mocks/*` | W4 | Test invest adapter only. Plan: [`NIP-0006`](0006-strategy.md) |
 
-Do not merge NETH into Grave, or the production adapter into the strategy interface delivery. Whether `StrategyManager` is a separate deployed contract or a module of Grave is a W4 question; W0 only reserves `src/` and `src/strategy/`.
+Do not merge NETH into Grave, or the production adapter into the strategy interface delivery. [`NIP-0006`](0006-strategy.md) puts the strategy slot on Grave (no separately deployed `StrategyManager`). W0 only reserves `src/` and `src/strategy/`.
 
 Delete the `forge init` Counter sample. Do not add `ERC20Pausable` (ordinary transfers must not pause). Do not add proxy helpers.
 
@@ -132,8 +132,8 @@ OpenZeppelin modules expected later (do not invent substitutes):
 - `ERC20`, `ERC20Burnable` (W1)
 - `ReentrancyGuard` (W2–W4)
 - `Pausable` on strategy-sensitive operations only (W4), never on NETH transfers
-- `Ownable2Step` and/or `AccessControl` for admin handoff (W4)
-- `TimelockController` only if W4/W6 cannot reuse already-deployed Base infrastructure (spec §18.2)
+- `Ownable2Step` on Grave for admin handoff (W4). Plan: [`NIP-0006`](0006-strategy.md)
+- `TimelockController` only if W4/W6 cannot reuse already-deployed Base infrastructure (spec §18.2). [`NIP-0006`](0006-strategy.md) embeds the 14-day delay on Grave instead of deploying one.
 
 Forbidden in this repo unless a later NDR says otherwise:
 

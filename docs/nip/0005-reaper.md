@@ -437,15 +437,14 @@ W3 is done when:
 
 Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 
-- Grave → Reaper harvest transfer, `alreadyReservedForReaper`, `YieldHarvested` (W4)
-- whether Grave stores Reaper via a one-time setter (needed because §18.3 deploys Reaper after Grave; W4)
-- pause of auction creation (W4; may extend Reaper in place or have Reaper read a Grave pause flag)
-- `IStrategyAdapter` use, timelock, Ownable/AccessControl (W4)
+- Grave → Reaper harvest transfer, `alreadyReservedForReaper`, `YieldHarvested` (W4). Plan: [`NIP-0006`](0006-strategy.md)
+- whether Grave stores Reaper via a one-time setter (needed because §18.3 deploys Reaper after Grave; W4). Plan: [`NIP-0006`](0006-strategy.md)
+- pause of auction creation (W4; Reaper reads Grave `paused()`). Plan: [`NIP-0006`](0006-strategy.md)
+- `IStrategyAdapter` use, timelock, Ownable/AccessControl (W4). Plan: [`NIP-0006`](0006-strategy.md)
 - production adapter (W5; NDR before code)
 - CREATE2, cost script, explorer verification (W6)
 - accepting the compiler / OZ / Foundry freeze (NDR-0002)
-- whether `StrategyManager` is a separate deployed contract (W4; [`NIP-0001`](0001-scaffolding.md) §4)
 
 No new NDR is required for this plan. Separate `Reaper.sol`, no minimum budget, test-injected ETH, harvest-with-W4, and no DEX/oracle are already in [`NIP-0000`](0000-the-roadmap.md) and spec §8 / §11 / §21. Constructor immutables follow §18.3 (Grave exists before Reaper). Views on Reaper follow §11 separation and [`NIP-0004`](0004-grave.md) deferral. Donation vs harvest accounting is spec §16.2. Curve constants are spec §8.4 / §21. Public APIs below are spec §8 / §12 / §13, not new surfaces.
 
-W4 is expected to extend `Grave.sol` (and possibly `Reaper.sol` for pause) in place before W6 production deploy. Keep Reaper ETH accounting independent of Grave `protectedPrincipal`.
+W4 extends `Grave.sol` and adds a `grave.paused()` check to `Reaper.startAuction` ([`NIP-0006`](0006-strategy.md)) before W6 production deploy. Keep Reaper ETH accounting independent of Grave `protectedPrincipal`.
