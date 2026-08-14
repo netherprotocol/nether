@@ -6,11 +6,12 @@
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Venue: Accepted [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md)
+- Pool lookup: Accepted [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md)
 - Strategy admin: Accepted [`NDR-0005`](../ndr/0005-strategy-security.md)
 - Working versions: Proposed [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (not accepted)
 - License: [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md) (`SPDX-License-Identifier: UNLICENSED`)
 
-This plan is the W5 breakdown. It implements the production `IStrategyAdapter` chosen in [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md): Aave V3 Core on Base, supply-only canonical WETH. It does not change NETH, Grave, Reaper, or the adapter interface. It does not deploy (W6).
+This plan is the W5 breakdown. It implements the production `IStrategyAdapter` chosen in [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md): Aave V3 Core on Base, supply-only canonical WETH. Pool is `provider.getPool()` at use ([`NDR-0007`](../ndr/0007-aave-pool-via-provider.md)), not an immutable. It does not change NETH, Grave, Reaper, or the adapter interface. It does not deploy (W6).
 
 ## 1. Purpose
 
@@ -26,8 +27,8 @@ In scope:
 
 - `AaveV3WethAdapter` under `contracts/src/strategy/` implementing `IStrategyAdapter` **exactly** as spec §6.4
 - Tiny local interfaces for WETH9, Aave V3 Pool, PoolAddressesProvider, and aToken (no Aave core submodule)
-- Wrap locally, `Pool.supply` WETH, disable collateral, NAV = aWETH `balanceOf`, withdraw / unwrap to ETH
-- Constructor pin + provider `getPool()` check ([`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
+- Wrap locally, `provider.getPool()` then `supply` WETH, disable collateral, NAV = aWETH `balanceOf`, withdraw / unwrap to ETH
+- Constructor stores Grave, provider, WETH, aWETH; no Pool immutable ([`NDR-0007`](../ndr/0007-aave-pool-via-provider.md))
 - Unit tests with mocks (no RPC)
 - Base fork tests: canonical WETH, this adapter, harvest realization, migration, aToken decimals/index ([spec §17](../protocol_spec.md))
 - Strategy-specific risk analysis in §11 (spec §22 item 7)
@@ -45,7 +46,7 @@ Out of scope:
 
 ## 3. Architecture choices
 
-These shapes are authorized for W5. They do not change era math, harvest, or the 14-day delay. Spec and [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) win if anything below disagrees.
+These shapes are authorized for W5. They do not change era math, harvest, or the 14-day delay. Spec, [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md), and [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md) win if anything below disagrees.
 
 ### 3.1 One adapter contract, local interfaces
 
@@ -76,19 +77,25 @@ Interfaces are **external** ABI slices, not Nether protocol surface. Do not add 
 |---|---|
 | `Ownable` / `Pausable` on the adapter | Extra key; NDR-0006 forbids it. |
 | `rescueToken` / `sweep` | Can steal WETH/aWETH. |
-| Role-less adapter (chosen) | Only Grave can `depositETH` / `withdrawETH`. Constructor immutables only. |
+| Role-less adapter (chosen) | Only Grave can `depositETH` / `withdrawETH`. Constructor immutables: Grave, provider, WETH, aWETH. |
 
-### 3.3 Approve exact WETH each deposit
+### 3.3 Pool from provider, not storage
+
+[`NDR-0007`](../ndr/0007-aave-pool-via-provider.md): do not store Pool. On `depositETH` / `withdrawETH`, `pool = provider.getPool()`, then require `pool == aWeth.POOL()` (and non-zero). Approve and `supply`/`withdraw` that `pool`. Constructor checks the same match once.
+
+Aave `setPoolImpl` keeps `getPool()` stable. If governance registers a **new** proxy, the adapter reverts until a 14-day Grave migration to an adapter built with the new aToken.
+
+### 3.4 Approve exact WETH each deposit
 
 NDR-0006 call flow: `WETH.approve(Pool, amount)` then `supply`. After `supply`, allowance is consumed.
 
 Do not `approve(type(uint256).max)` in the constructor. Do not approve aTokens to anyone.
 
-### 3.4 Always disable collateral after supply
+### 3.5 Always disable collateral after supply
 
 Aave V3 `setUserUseReserveAsCollateral` **returns without reverting** if the flag already matches (SupplyLogic: `if (useAsCollateral == userConfig.isUsingAsCollateral(reserve.id)) return`). First WETH `supply` typically enables collateral (WETH LTV ≠ 0). After every successful `supply`, call `setUserUseReserveAsCollateral(weth, false)`. No bitmap decode, no try/catch.
 
-### 3.5 Fork tests off the default profile
+### 3.6 Fork tests off the default profile
 
 Default CI is `forge test -vvv` with no RPC ([`NIP-0001`](0001-scaffolding.md)). Fork tests need `BASE_RPC_URL`.
 
@@ -108,9 +115,9 @@ forge test --match-path 'test/fork/**' --fork-url "$BASE_RPC_URL" -vvv
 
 Do not fail the default `check` job when the secret is absent. Do not add a second workflow file (NIP-0006). Do not commit RPC URLs.
 
-### 3.6 Mocks for unit tests, live Aave for fork tests
+### 3.7 Mocks for unit tests, live Aave for fork tests
 
-Unit/fuzz: `test/mocks/MockWETH9.sol` and `test/mocks/MockAaveV3Pool.sol` so W5 does not make `forge test` depend on Aave. Fork: real Base WETH + Pool + aBasWETH.
+Unit/fuzz: `test/mocks/MockWETH9.sol`, `test/mocks/MockAaveV3Pool.sol`, and `test/mocks/MockPoolAddressesProvider.sol` so W5 does not make `forge test` depend on Aave. Fork: real Base WETH + Pool + aBasWETH.
 
 Keep `TestInvestAdapter` for existing W4 suites. Do not delete it. Do not put mocks under `src/`.
 
@@ -147,32 +154,34 @@ function UNDERLYING_ASSET_ADDRESS() external view returns (address);
 File: `contracts/src/strategy/AaveV3WethAdapter.sol`. `pragma solidity 0.8.36;`. SPDX `UNLICENSED`. Inherit `IStrategyAdapter` and OpenZeppelin `ReentrancyGuard`. Do not inherit `Ownable` or `Pausable`.
 
 ```text
-constructor(address grave_, address provider_, address pool_, address weth_, address aWeth_)
-    // reject zero / EOAs (extcodesize == 0) for all five
-    // require IPoolAddressesProvider(provider_).getPool() == pool_
-    // require IAToken(aWeth_).POOL() == pool_
+constructor(address grave_, address provider_, address weth_, address aWeth_)
+    // reject zero / EOAs (extcodesize == 0) for all four
+    // pool = IPoolAddressesProvider(provider_).getPool(); reject zero
+    // require IAToken(aWeth_).POOL() == pool
     // require IAToken(aWeth_).UNDERLYING_ASSET_ADDRESS() == weth_
-    // store grave, pool, weth, aWeth as immutables
-    // do not store provider
+    // store grave, provider, weth, aWeth as immutables
+    // do not store pool
 
-depositETH() payable nonReentrant          // only grave; wrap; approve; supply; disable collateral
-withdrawETH(amount, recipient) nonReentrant // only grave; recipient == grave; withdraw; unwrap; send
+depositETH() payable nonReentrant          // only grave; wrap; pool=getPool(); approve; supply; disable collateral
+withdrawETH(amount, recipient) nonReentrant // only grave; recipient == grave; pool=getPool(); withdraw; unwrap; send
 totalAssetsInETH() view                    // aWeth.balanceOf(address(this))
 underlying() view                          // weth
 receive() payable                          // only weth (WETH9 withdraw)
 ```
 
-Working mainnet pins (re-check at W6; spec §24):
+`_pool()` helper: `p = provider.getPool(); require p != 0 && p == aWeth.POOL(); return p`.
+
+Working mainnet pins (re-check at W6; spec §24). **Pool is `provider.getPool()`, not adapter storage.** The Pool row is the expected return value at W6:
 
 | Role | Address |
 |---|---|
 | Canonical WETH | `0x4200000000000000000000000000000000000006` |
 | PoolAddressesProvider | `0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D` |
-| Pool | `0xA238Dd80C259a72e81d7e4664a9801593F98d1c5` |
+| Pool (expected `getPool()`) | `0xA238Dd80C259a72e81d7e4664a9801593F98d1c5` |
 | aBasWETH | `0xD4a0e0b9149BCee3C920d2E00b5dE09138fd8bb7` |
 | variableDebtWETH (tests only) | `0x24e6e0795b3c7c71D965fCc4f371803d1c1DcA1E` |
 
-Constructor takes the addresses; tests pass these values. Do not hardcode them inside the adapter bytecode except as test constants / W6 script (W6). A wrong pin must fail the constructor checks, not silently supply the wrong market.
+Constructor takes Grave, provider, WETH, aWETH. Tests pass the NDR-0006/0007 pins. Do not hardcode Pool inside the adapter. A provider whose `getPool()` is not `aWeth.POOL()` must fail the constructor, not silently supply the wrong market.
 
 Custom errors (suggested names):
 
@@ -192,6 +201,7 @@ InvalidRecipient()
 ```text
 require msg.sender == grave
 require msg.value > 0
+pool = _pool()
 WETH.deposit{value: msg.value}()
 WETH.approve(pool, msg.value)
 pool.supply(weth, msg.value, address(this), 0)
@@ -214,6 +224,7 @@ require recipient == grave
 assets = aWeth.balanceOf(address(this))
 toWithdraw = amount < assets ? amount : assets
 if toWithdraw == 0: return 0
+pool = _pool()
 if toWithdraw == assets: request = type(uint256).max   // avoid aToken dust
 else: request = toWithdraw
 wethBefore = WETH.balanceOf(address(this))
@@ -291,7 +302,8 @@ contracts/
     └── mocks/
         ├── TestInvestAdapter.sol        unchanged
         ├── MockWETH9.sol                new
-        └── MockAaveV3Pool.sol           new
+        ├── MockAaveV3Pool.sol           new
+        └── MockPoolAddressesProvider.sol new
 ```
 
 Existing W4 unit/fuzz/invariant suites stay green without this adapter.
@@ -300,12 +312,12 @@ Existing W4 unit/fuzz/invariant suites stay green without this adapter.
 
 ### 9.1 Unit (`test/unit/AaveV3WethAdapter.t.sol`)
 
-Mocks: WETH9 that mints 1:1 on `deposit` and burns on `withdraw`; Pool that pulls WETH, mints mock aTokens 1:1, accrues via `simulateInterest`, optionally reverts on `supply`/`withdraw`, tracks collateral flag, never opens debt.
+Mocks: WETH9 that mints 1:1 on `deposit` and burns on `withdraw`; Pool that pulls WETH, mints mock aTokens 1:1, accrues via `simulateInterest`, optionally reverts on `supply`/`withdraw`, tracks collateral flag, never opens debt; Provider whose `getPool()` the test can retarget.
 
 Constructor:
 
-- zero / EOA / `getPool() != pool_` / aToken `POOL` or underlying mismatch revert
-- immutables match; `underlying() == weth`
+- zero / EOA / `getPool() == 0` / `getPool() != aToken.POOL()` / aToken underlying mismatch revert
+- immutables are grave, provider, weth, aWeth; no `pool()` storage; `underlying() == weth`
 
 Access:
 
@@ -328,6 +340,7 @@ Withdraw:
 - full withdraw uses `type(uint256).max` against the mock (assert the request, or assert zero aToken dust)
 - `amount == 0` or zero aToken returns 0 without Pool call
 - reverting Pool `withdraw` reverts the adapter call
+- after a successful deposit, retargeting the mock provider so `getPool() != aToken.POOL()` makes further `depositETH` / `withdrawETH` revert (`InvalidPool`)
 
 NAV:
 
@@ -357,11 +370,14 @@ collateral remains disabled
 variable-debt token balance is always 0
 only grave can deposit/withdraw
 recipient other than grave always reverts
+deposit/withdraw revert when mock provider.getPool() != aToken.POOL()
 ```
 
 ### 9.3 Fork (`test/fork/AaveV3WethAdapter.t.sol`)
 
-`vm.createSelectFork("base")` (or `--fork-url`). Deal ETH to a test Grave admin and burier. Deploy NETH, Grave, Reaper, adapter with the NDR-0006 addresses. `setReaper`, schedule, warp 14 days, execute.
+`vm.createSelectFork("base")` (or `--fork-url`). Deal ETH to a test Grave admin and burier. Deploy NETH, Grave, Reaper, adapter with constructor `(grave, provider, weth, aWeth)` using the NDR-0006/0007 pins. `setReaper`, schedule, warp 14 days, execute.
+
+Fork also asserts `provider.getPool() == aWeth.POOL() == 0xA238Dd80…d1c5` at the chosen block.
 
 Spec §17:
 
@@ -411,7 +427,9 @@ This section is the W5 risk artifact for the Aave V3 WETH adapter. It does not c
 
 **Leverage.** Disabled by construction: no borrow/flash-loan code; collateral flag cleared after supply; tests assert zero variable debt. A future Aave change cannot make this adapter borrow unless bytecode is replaced (14-day Grave migration).
 
-**Wrapping.** WETH9 on `0x4200…0006` only. Gateway unused. Wrong WETH in the constructor fails `UNDERLYING_ASSET_ADDRESS` / provider checks.
+**Wrapping.** WETH9 on `0x4200…0006` only. Gateway unused. Wrong WETH in the constructor fails `UNDERLYING_ASSET_ADDRESS`. Wrong market fails `getPool() == aToken.POOL()`.
+
+**Pool lookup.** Provider is immutable; Pool is not. In-place `setPoolImpl` keeps `getPool()` stable. A new Pool proxy that no longer matches `aToken.POOL()` reverts deposits/withdrawals until a 14-day Grave migration ([`NDR-0007`](../ndr/0007-aave-pool-via-provider.md)).
 
 **Oracles.** Adapter NAV does not read Aave’s ETH price feed. Disabling collateral avoids health-factor / oracle paths for this user. Aave still uses oracles for the rest of the pool (liquidation of *other* users), which can stress utilization.
 
@@ -435,7 +453,7 @@ Do not run these until this NIP is explicitly started.
 
 1. Add the four tiny interfaces in §4.
 2. Add `AaveV3WethAdapter.sol` as in §5. `pragma solidity 0.8.36;`. SPDX `UNLICENSED`.
-3. Add `MockWETH9` and `MockAaveV3Pool`.
+3. Add `MockWETH9`, `MockAaveV3Pool`, and `MockPoolAddressesProvider`.
 4. Add unit and fuzz tests in §9.1–§9.2.
 5. Add `test/fork/AaveV3WethAdapter.t.sol` as in §9.3.
 6. Update `foundry.toml` and `contracts.yml` as in §10. Do not change compiler pins.
@@ -447,7 +465,8 @@ Do not run these until this NIP is explicitly started.
 W5 is done when:
 
 - `AaveV3WethAdapter` lives under `src/strategy/` and implements spec §6.4 without interface changes
-- Constructor checks provider `getPool()`, aToken `POOL()`, and aToken underlying
+- Constructor checks `provider.getPool() == aToken.POOL()` and aToken underlying; Pool is not stored
+- `depositETH` / `withdrawETH` call `provider.getPool()` and revert if it is not `aToken.POOL()`
 - `depositETH` wraps, supplies, disables collateral; `withdrawETH` unwraps to Grave only
 - `totalAssetsInETH()` is aWETH `balanceOf`; `underlying()` is canonical WETH
 - no owner, pause, gateway, borrow, incentives, or rescue
@@ -469,4 +488,4 @@ Leave these to later NIPs / NDRs:
 - NDR-0005 safer meta-adapter internals and `owner → address(0)`
 - keeper (W8)
 
-Venue, wrap-locally, supply-only WETH, aToken NAV, no gateway/borrow/incentives/owner, and the Base V3 pins are [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md). `IStrategyAdapter` is spec §6.4. Harvest and 14-day migration are [`NIP-0006`](0006-strategy.md). Pause stays off Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).
+Venue, wrap-locally, supply-only WETH, aToken NAV, no gateway/borrow/incentives/owner, and the Base V3 pins are [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md). Pool is `provider.getPool()` at use ([`NDR-0007`](../ndr/0007-aave-pool-via-provider.md)). `IStrategyAdapter` is spec §6.4. Harvest and 14-day migration are [`NIP-0006`](0006-strategy.md). Pause stays off Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).
