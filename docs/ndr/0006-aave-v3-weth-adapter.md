@@ -94,6 +94,38 @@ Leverage prohibition: adapter bytecode has no borrow/flash-loan path; collateral
 - Option F is out of spec.
 - Option G is a later venue candidate, not the first one.
 
+## Integration
+
+These are Aave V3 facts the adapter relies on. They do not change Option C.
+
+**PoolAddressesProvider** is Aave’s registry for one market (here: V3 Core on Base). Its address is stable. `getPool()` returns the Pool **proxy**. Aave governance may upgrade the Pool implementation behind that proxy; it should not silently replace the proxy. At deploy, call `provider.getPool()` and revert if it is not the pinned Pool. Store Grave, Pool, WETH, and aWETH as immutables. Do not read the provider again at runtime.
+
+**aWETH** is Aave’s rebasing receipt for supplied WETH: one aToken per reserve, 1:1 with the underlying at mint/burn, `balanceOf` includes accrued supply interest. **aBasWETH** is the Basescan / address-book name of that same token on Base (`a` + `Bas` + `WETH`). There is not a second token.
+
+**Yield does not arrive as a transfer.** Borrowers pay interest into the WETH reserve; Aave raises that reserve’s liquidity index; `aWETH.balanceOf(adapter)` grows with no call and no ETH/WETH moving onto the adapter. Nether `harvest()` is what later turns the surplus into ETH for Reaper: Grave calls `withdrawETH`, the adapter burns aTokens via `Pool.withdraw`, unwraps WETH, and sends ETH to Grave.
+
+**Wrapping** is WETH9 on canonical Base WETH (`0x4200…0006`). Aave’s Pool accepts only ERC-20, not native ETH. `WETH.deposit{value: n}()` credits `n` WETH 1:1; `WETH.withdraw(n)` burns `n` WETH and returns `n` ETH. The adapter wraps before `supply` and unwraps after `withdraw`. Do not use Aave’s Wrapped Token Gateway.
+
+**`setUserUseReserveAsCollateral(asset, useAsCollateral)`** is a Pool call that marks `msg.sender`’s supply of `asset` as borrowable collateral (`true`) or not (`false`). A first WETH `supply` typically enables collateral automatically because WETH’s LTV is not zero. Collateral is how Aave borrowing starts; with it on, a later `borrow` (or credit delegation) could debt-finance against Grave ETH. After every supply, if collateral is enabled, call `setUserUseReserveAsCollateral(WETH, false)`. Supply yield still accrues. Tests: `variableDebtWETH.balanceOf(adapter) == 0` and collateral disabled.
+
+Call flow:
+
+```text
+depositETH (Grave → adapter):
+  WETH.deposit{value}()
+  WETH.approve(Pool, amount)
+  Pool.supply(WETH, amount, adapter, 0)
+  Pool.setUserUseReserveAsCollateral(WETH, false)  // if enabled
+
+time passes:
+  aWETH.balanceOf(adapter) rises with the liquidity index
+
+withdrawETH (Grave pulls surplus or migrates):
+  Pool.withdraw(WETH, amount, adapter)   // burns aWETH, pays WETH
+  WETH.withdraw(received)
+  send ETH to recipient (Grave)
+```
+
 ## Consequences
 
 - W5 is this adapter plus Base fork tests (spec §17): wrap/unwrap, supply/withdraw, harvest realization, migration, supply-cap / paused-reserve / high-utilization failure. Spec §22 item 7 (strategy risk analysis) is written in W5, not here.
