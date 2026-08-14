@@ -9,6 +9,7 @@
 - Grave: [`0004-grave.md`](0004-grave.md)
 - Reaper: [`0005-reaper.md`](0005-reaper.md)
 - Strategy: [`0006-strategy.md`](0006-strategy.md)
+- Aave adapter: [`0007-aave-adapter.md`](0007-aave-adapter.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
@@ -39,7 +40,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 | 3 | Burying ETH, Grave, reckoning, eras | **W2** | [`NIP-0004`](0004-grave.md); era math library split out; reckoning = `EraCompleted` |
 | 4 | Reaper reverse Dutch auction | **W3** | [`NIP-0005`](0005-reaper.md); independent of the first production adapter |
 | 5 | Investment interface, yield to Reaper, strategy governance | **W4** | [`NIP-0006`](0006-strategy.md); harvest, timelock, **test invest adapter**. Pause is not on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)) |
-| 6 | AAVE pool for MVP | **W5** | Accepted [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md): Aave V3 Base, supply-only WETH |
+| 6 | AAVE pool for MVP | **W5** | [`NIP-0007`](0007-aave-adapter.md); venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) |
 | 7 | Landing site and dashboard | **W7** | Two surfaces, one workstream; FE stack [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
 | 8 | Grave Keeper (cranker) bot | **W8** | Pair with observability |
 | 9 | Aerodrome market (optional) | **W9** | After M2; outside the trust boundary |
@@ -129,15 +130,13 @@ Admin authority is strategy replacement (timelocked) only. It is not upgradeabil
 
 ### W5 — Initial production strategy (Aave V3 WETH)
 
+Detailed plan: [`0007-aave-adapter.md`](0007-aave-adapter.md).
+
 Spec §21 leaves the initial strategy implementation-time configurable inside the stated constraints. Spec §22 requires a Base-specific justification. The venue is Accepted [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md): Aave V3 Core on Base, supply-only canonical WETH, wrap locally, aWETH balance as NAV, no borrow/gateway/incentives.
 
-Path:
+[`NIP-0007`](0007-aave-adapter.md) puts `AaveV3WethAdapter` under `contracts/src/strategy/`, tiny local Aave/WETH interfaces (no Aave submodule), unit tests on mocks, Base fork tests behind `BASE_RPC_URL`, and the §22 item 7 risk analysis.
 
-1. Implement the adapter under `contracts/src/strategy/` against the existing `IStrategyAdapter` (no surface change).
-2. Base fork tests and strategy-specific risk analysis (§22 item 7).
-3. Re-verify Aave addresses at W6 from the address book (spec §24).
-
-M0 can still complete with the test invest adapter if fork work slips; M2 cannot ship without this production adapter.
+M0’s default `forge test` must not require RPC. M2 cannot ship without this production adapter.
 
 ### W6 — Deployment kit, Sepolia, mainnet
 
@@ -248,7 +247,7 @@ Do not accept these until the question is actually being decided. A Proposed rec
 | Compiler / OZ / Foundry version freeze | M2 (can wait until late M0) | Spec §18.3. Draft: [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (Proposed) |
 | `IStrategyAdapter` surface change, if any | W4 | Only if the spec interface is insufficient |
 | Strategy replacement security (owner theft vs later proxy) | W4 locked; later NIP for the proxy | [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). Not the W5 venue NDR |
-| Initial production strategy (Aave V3 WETH) | W5 | [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). W5 is implementation + fork tests + §22 risk analysis |
+| Initial production strategy (Aave V3 WETH) | W5 | Venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). Plan: [`NIP-0007`](0007-aave-adapter.md) (Proposed) |
 | Frontend framework | W7 landing | [`NDR-0003`](../ndr/0003-frontend-stack.md) (Accepted). Plan: [`NIP-0002`](0002-landing-docs.md) |
 | Indexer | W8 | Still TBD; live views can use §12 + RPC without one |
 | Keeper language / runtime | W8 | When a stack must be chosen |
@@ -263,7 +262,7 @@ W0 scaffold
  └─ W1 NETH ([`NIP-0003`](0003-neth.md))
      ├─ W2 Grave ([`NIP-0004`](0004-grave.md); era math library → bury → reckoning / EraCompleted → idle ETH)
      │    └─ W4 strategy interface, harvest, timelock, test invest adapter ([`NIP-0006`](0006-strategy.md))
-     │         └─ W5 production adapter (after NDR)
+     │         └─ W5 production adapter ([`NIP-0007`](0007-aave-adapter.md); [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
      └─ W3 Reaper ([`NIP-0005`](0005-reaper.md); can overlap W2 once NETH exists)
             └─ W4 harvest credits Reaper (no pause of auction creation)
 

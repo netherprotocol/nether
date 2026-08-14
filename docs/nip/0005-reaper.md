@@ -441,7 +441,7 @@ Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md)
 - whether Grave stores Reaper via a one-time setter (needed because §18.3 deploys Reaper after Grave; W4). Plan: [`NIP-0006`](0006-strategy.md)
 - pause of auction creation (W4 does not pause Reaper; [`NDR-0005`](../ndr/0005-strategy-security.md)). Plan: [`NIP-0006`](0006-strategy.md)
 - `IStrategyAdapter` use, timelock, Ownable (W4). Plan: [`NIP-0006`](0006-strategy.md)
-- production adapter (W5; [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
+- production adapter (W5; [`NIP-0007`](0007-aave-adapter.md))
 - CREATE2, cost script, explorer verification (W6)
 - accepting the compiler / OZ / Foundry freeze (NDR-0002)
 

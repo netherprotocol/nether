@@ -628,7 +628,7 @@ W4 is done when:
 
 Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 
-- production adapter implementation (W5; venue is [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
+- production adapter implementation (W5; [`NIP-0007`](0007-aave-adapter.md), venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
 - any `IStrategyAdapter` surface change (only if W5 proves §6.4 insufficient — then an NDR, not a silent edit)
 - which Base multisig-capable account receives ownership (W6; reuse existing infrastructure)
 - CREATE2, cost script, explorer verification (W6)

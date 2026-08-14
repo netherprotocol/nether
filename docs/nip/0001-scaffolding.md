@@ -105,7 +105,7 @@ Production contracts arrive in later workstreams, as separate files, matching sp
 | `src/libraries/EraMath.sol` | W2 | Pure library. Plan: [`NIP-0004`](0004-grave.md) |
 | `src/Reaper.sol` | W3 | Reverse Dutch auction. Plans: [`NIP-0005`](0005-reaper.md), [`NIP-0006`](0006-strategy.md) harvest credit |
 | `src/interfaces/IStrategyAdapter.sol` | W0 (stub), W4 (used) | Exact §6.4 surface. Plan: [`NIP-0006`](0006-strategy.md) |
-| `src/strategy/*` | W5 | Production adapter after its NDR |
+| `src/strategy/*` | W5 | Production adapter. Plan: [`NIP-0007`](0007-aave-adapter.md); venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) |
 | `test/mocks/*` | W4 | Test invest adapter only. Plan: [`NIP-0006`](0006-strategy.md) |
 
 Do not merge NETH into Grave, or the production adapter into the strategy interface delivery. [`NIP-0006`](0006-strategy.md) puts the strategy slot on Grave (no separately deployed `StrategyManager`). W0 only reserves `src/` and `src/strategy/`.
@@ -258,5 +258,5 @@ Leave these to later NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 - Accepting the compiler / OZ / Foundry freeze (NDR-0002)
 - Frontend freeze (NDR-0003, Accepted); indexer remains TBD (W8)
 - Gravekeeper language and runtime
-- Initial production strategy ([`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md), Accepted)
+- Initial production strategy (venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md); plan [`NIP-0007`](0007-aave-adapter.md))
 - Any `IStrategyAdapter` surface change
