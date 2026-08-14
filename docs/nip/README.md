@@ -29,3 +29,4 @@ docs/nip/
 | [0000](0000-the-roadmap.md) | The Roadmap | Living |
 | [0001](0001-scaffolding.md) | Repository scaffolding | Implemented |
 | [0002](0002-landing-docs.md) | Landing site and documentation | Implemented |
+| [0003](0003-neth.md) | NETH token | Planned |

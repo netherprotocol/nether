@@ -100,7 +100,7 @@ Production contracts arrive in later workstreams, as separate files, matching sp
 
 | File | Workstream | Notes |
 |---|---|---|
-| `src/NETH.sol` | W1 | OZ ERC-20 + burn; Grave-only mint |
+| `src/NETH.sol` | W1 | OZ ERC-20 + burn; Grave-only mint. Plan: [`NIP-0003`](0003-neth.md) |
 | `src/Grave.sol` | W2, then W4 | Burial/eras first; harvest and strategy slot later |
 | `src/libraries/EraMath.sol` | W2 | Pure library |
 | `src/Reaper.sol` | W3 | Reverse Dutch auction |

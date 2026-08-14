@@ -5,6 +5,7 @@
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Decision log: [`ndr/README.md`](../ndr/README.md)
 - Scaffolding: [`0001-scaffolding.md`](0001-scaffolding.md)
+- NETH: [`0003-neth.md`](0003-neth.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
@@ -31,7 +32,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 | # | Starting layout | Workstream | Notes |
 |---|---|---|---|
 | 1 | Scaffold Solidity / OpenZeppelin / toolchain | **W0** | [`NIP-0001`](0001-scaffolding.md) |
-| 2 | `$NETH` ERC-20 | **W1** | Separate token contract; Grave-only mint (§11) |
+| 2 | `$NETH` ERC-20 | **W1** | [`NIP-0003`](0003-neth.md); Grave-only mint (§11) |
 | 3 | Burying ETH, Grave, reckoning, eras | **W2** | Era math library split out; reckoning = `EraCompleted` |
 | 4 | Reaper reverse Dutch auction | **W3** | Independent of the first production adapter |
 | 5 | Investment interface, yield to Reaper, strategy governance | **W4** | Harvest, pause, timelock, **test invest adapter** |
@@ -64,6 +65,8 @@ Out of scope for W0: protocol logic, frontend implementation, keeper implementat
 
 ### W1 — NETH
 
+Detailed plan: [`0003-neth.md`](0003-neth.md).
+
 Implement the ERC-20 in spec §4:
 
 - name `Nether`, symbol `NETH`, 18 decimals
@@ -71,7 +74,7 @@ Implement the ERC-20 in spec §4:
 - mint callable only by the immutable Grave
 - standard burn used by the Reaper on NETH it owns
 
-Deployment order in §18.3 is NETH, then Grave, then lock mint authority. W1 should make that wiring explicit (constructor, one-time setter that then becomes immutable, or equivalent) without leaving a standing admin mint.
+Deployment order in §18.3 is NETH, then Grave, then lock mint authority. W1 should make that wiring explicit (constructor, one-time setter that then becomes immutable, or equivalent) without leaving a standing admin mint. [`NIP-0003`](0003-neth.md) uses a one-time `setGrave` lock.
 
 ### W2 — Grave: eras, burial, reckoning
 
@@ -208,6 +211,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | Frontend stack | [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md). Indexer still TBD (W8). |
 | Keeper language / runtime | TBD when W8 requires a choice; then an NDR. |
 | Repo layout | Isolated `contracts/`, `apps/web/`, and `apps/keeper/` trees. See [`NIP-0001`](0001-scaffolding.md). |
+| NETH mint lock | One-time `setGrave`, then immutable; no standing admin. See [`NIP-0003`](0003-neth.md). |
 | Toolchain versions | Proposed in [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md); not frozen until that NDR is accepted. |
 | This plan | Living NIP. Adjust on demand. Do not copy it into an NDR. |
 | Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. |
@@ -239,7 +243,7 @@ Routine mechanical work (typos, tests that restore documented behavior) does not
 
 ```text
 W0 scaffold
- └─ W1 NETH
+ └─ W1 NETH ([`NIP-0003`](0003-neth.md))
      ├─ W2 Grave (era math library → bury → reckoning / EraCompleted → idle ETH)
      │    └─ W4 strategy interface, harvest, timelock, pause, test invest adapter
      │         └─ W5 production adapter (after NDR)
