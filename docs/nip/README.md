@@ -32,4 +32,4 @@ docs/nip/
 | [0003](0003-neth.md) | NETH token | Implemented |
 | [0004](0004-grave.md) | Grave — burial, eras, and reckoning | Implemented |
 | [0005](0005-reaper.md) | Reaper — reverse Dutch auction | Implemented |
-| [0006](0006-strategy.md) | Strategy interface, harvest, and strategy governance | Planned |
+| [0006](0006-strategy.md) | Strategy interface, harvest, and strategy governance | Implemented |

@@ -63,7 +63,7 @@ contract ReaperTest is Test {
         alice = makeAddr("alice");
         bob = makeAddr("bob");
         neth = new NETH(setter);
-        grave = new Grave(address(neth));
+        grave = new Grave(address(neth), makeAddr("admin"));
         vm.prank(setter);
         neth.setGrave(address(grave));
         reaper = new Reaper(address(neth), address(grave));

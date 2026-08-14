@@ -1,6 +1,6 @@
 # NIP-0006: Strategy interface, harvest, and strategy governance
 
-- Status: Planned
+- Status: Implemented
 - Date: 2026-08-14
 - Workstream: W4
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
