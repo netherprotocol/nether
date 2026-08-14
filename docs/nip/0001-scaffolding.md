@@ -1,6 +1,6 @@
 # NIP-0001: Repository scaffolding
 
-- Status: Ready to implement
+- Status: Implemented
 - Date: 2026-08-13
 - Workstream: W0
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
