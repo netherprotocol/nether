@@ -300,7 +300,6 @@ contract AaveV3WethAdapterGraveTest is Test {
         (address pending, uint256 executeAfter) = grave.pendingStrategy();
         assertEq(pending, address(adapter));
         assertEq(executeAfter, block.timestamp + 14 days);
-        vm.warp(block.timestamp + 14 days);
         vm.prank(admin);
         grave.executeStrategyMigration();
         assertEq(grave.activeStrategy(), address(adapter));

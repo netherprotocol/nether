@@ -355,7 +355,7 @@ Absence:
 
 Grave integration (unit, still mocked Pool):
 
-- `scheduleStrategy` + warp 14 days + `executeStrategyMigration` from `address(0)`
+- `scheduleStrategy` + `executeStrategyMigration` from `address(0)` (no 14-day wait; [`NDR-0008`](../ndr/0008-initial-strategy-immediate.md))
 - `bury` deposits into the adapter; `currentNAV` includes aToken NAV
 - mock interest then `harvest` sends only surplus ETH to Reaper; `protectedPrincipal` unchanged
 - mock `supply` revert: `bury` still mints; ETH idle on Grave
@@ -375,7 +375,7 @@ deposit/withdraw revert when mock provider.getPool() != aToken.POOL()
 
 ### 9.3 Fork (`test/fork/AaveV3WethAdapter.t.sol`)
 
-`vm.createSelectFork("base")` (or `--fork-url`). Deal ETH to a test Grave admin and burier. Deploy NETH, Grave, Reaper, adapter with constructor `(grave, provider, weth, aWeth)` using the NDR-0006/0007 pins. `setReaper`, schedule, warp 14 days, execute.
+`vm.createSelectFork("base")` (or `--fork-url`). Deal ETH to a test Grave admin and burier. Deploy NETH, Grave, Reaper, adapter with constructor `(grave, provider, weth, aWeth)` using the NDR-0006/0007 pins. `setReaper`, schedule, execute (first adapter has no 14-day wait).
 
 Fork also asserts `provider.getPool() == aWeth.POOL() == 0xA238Dd80…d1c5` at the chosen block.
 

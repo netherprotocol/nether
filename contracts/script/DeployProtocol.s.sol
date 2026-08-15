@@ -549,7 +549,8 @@ contract DeployProtocol is Script {
         if (!_st.strategyScheduled) {
             return;
         }
-        if (block.timestamp < _st.strategyExecuteAfter) {
+        address active = Grave(payable(_st.grave)).activeStrategy();
+        if (active != address(0) && block.timestamp < _st.strategyExecuteAfter) {
             _pause(
                 address(0),
                 string.concat(
@@ -673,7 +674,8 @@ contract DeployProtocol is Script {
 
     function _refreshStatus() internal {
         if (
-            _st.strategyScheduled && !_st.strategyExecuted && !_cfg.skipExecute
+            _st.strategyScheduled && !_st.strategyExecuted && !_cfg.skipExecute && _st.grave != address(0)
+                && Grave(payable(_st.grave)).activeStrategy() != address(0)
                 && block.timestamp < _st.strategyExecuteAfter
         ) {
             _st.status = "waiting_strategy_delay";

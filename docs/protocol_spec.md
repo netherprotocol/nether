@@ -232,9 +232,9 @@ It requires:
 
 1. proposal by the protocol multisig;
 2. public on-chain scheduling;
-3. a 14-day timelock;
+3. a 14-day timelock when replacing an already-active adapter;
 4. an adapter address fixed at scheduling time;
-5. execution after the delay;
+5. execution after the delay when replacing an already-active adapter; the first adapter (from unset) MAY be executed immediately after scheduling;
 6. withdrawal/migration of all recoverable assets from the old adapter;
 7. deposit into the new adapter;
 8. post-migration NAV verification.
@@ -451,12 +451,12 @@ No proxy can modify these values.
 
 Administrative authority is a multisig, not an EOA.
 
-Production administrative authority MUST use a multisig-capable account rather than a single deployer EOA. To minimize launch cost, Nether MAY use existing audited Base multisig/account infrastructure instead of deploying custom multisig code. Strategy changes execute only through the required 14-day timelock.
+Production administrative authority MUST use a multisig-capable account rather than a single deployer EOA. To minimize launch cost, Nether MAY use existing audited Base multisig/account infrastructure instead of deploying custom multisig code. Replacement of an already-active adapter executes only through the required 14-day timelock. The initial adapter, while none is active, MAY be executed immediately after scheduling.
 
 The admin can:
 
 - schedule a new strategy adapter;
-- execute a scheduled strategy migration after 14 days;
+- execute a scheduled strategy migration after 14 days when an adapter is already active, or immediately when none is active;
 - pause strategy-sensitive operations during an emergency;
 - unpause after remediation.
 
@@ -739,7 +739,7 @@ Required test classes:
 - full and partial Reaper fills;
 - rollover;
 - auction start with any positive available Reaper ETH (no minimum budget);
-- strategy scheduling and 14-day delay.
+- strategy scheduling, 14-day replacement delay, and immediate first activation.
 
 ### Fuzz/property tests
 
@@ -901,7 +901,7 @@ The following decisions are final for Nether v1:
 | Optional future market | External milestone; Aerodrome/Uniswap are candidates |
 | Monetary core | Immutable/non-proxy |
 | Strategy | Replaceable adapter |
-| Strategy change delay | 14 days |
+| Strategy change delay | 14 days when replacing an active adapter; initial set from unset may execute immediately |
 | Strategy leverage | Forbidden |
 | Protocol yield fee | 0% |
 | Strategy selection | Intentionally implementation-time configurable within this specification's constraints |

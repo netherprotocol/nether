@@ -2,7 +2,7 @@
 
 `*.json` files in this directory are written by `script/deploy.sh` / `DeployProtocol.s.sol`.
 
-They record contract addresses and completed wiring steps so a run can be resumed after an RPC drop, a wallet switch, or the 14-day strategy delay. They do not contain private keys.
+They record contract addresses and completed wiring steps so a run can be resumed after an RPC drop or a wallet switch. They do not contain private keys.
 
 Default paths:
 

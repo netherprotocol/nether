@@ -43,3 +43,4 @@ docs/ndr/
 | [0005](0005-strategy-security.md) | Strategy replacement security | Accepted |
 | [0006](0006-aave-v3-weth-adapter.md) | Initial production strategy adapter (Aave V3 WETH) | Accepted |
 | [0007](0007-aave-pool-via-provider.md) | Resolve Aave Pool via PoolAddressesProvider | Accepted |
+| [0008](0008-initial-strategy-immediate.md) | Immediate first strategy activation | Accepted |

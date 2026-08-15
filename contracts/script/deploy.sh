@@ -5,9 +5,9 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Deploy the Nether contract family (NETH, Grave, Reaper, Aave V3 WETH adapter)
-and wire setGrave / setReaper / scheduleStrategy. Progress is stored in a JSON
-state file so a run can be resumed after an RPC failure, a wallet switch, or
-the 14-day strategy delay.
+and wire setGrave / setReaper / scheduleStrategy. The first adapter is executed
+in the same run. Progress is stored in a JSON state file so a run can be
+resumed after an RPC failure or a wallet switch.
 
 Usage:
   ./script/deploy.sh --network <base|base-sepolia> [options]
@@ -41,7 +41,7 @@ Resume / redeploy
   --redeploy              Archive Sepolia state and start a new family
   --state-file PATH       Override deployments/<network>.json
   --status                Print on-chain + JSON summary, send no transactions
-  --skip-execute-strategy Stop after scheduleStrategy (do not wait on the 14-day delay)
+  --skip-execute-strategy Stop after scheduleStrategy (do not call executeStrategyMigration)
   --skip-ownership        Do not transferOwnership
   --dry-run               Simulate against the RPC; do not persist state
 

@@ -14,7 +14,7 @@ or `FOUNDRY_PROFILE=fork forge test` with `BASE_RPC_URL` set so the `base` RPC e
 
 ## Deploy
 
-`script/deploy.sh` deploys NETH, Grave, Reaper, and the Aave V3 WETH adapter on Base or Base Sepolia, then wires the family (`setGrave`, `setReaper`, `scheduleStrategy`). Progress is written to `deployments/<network>.json` so a run can be resumed after an RPC drop, a wallet switch, or the 14-day strategy delay.
+`script/deploy.sh` deploys NETH, Grave, Reaper, and the Aave V3 WETH adapter on Base or Base Sepolia, then wires the family (`setGrave`, `setReaper`, `scheduleStrategy`, and `executeStrategyMigration` for the first adapter). Progress is written to `deployments/<network>.json` so a run can be resumed after an RPC drop or a wallet switch.
 
 ```text
 ./script/deploy.sh --network base-sepolia --rpc-url "$BASE_SEPOLIA_RPC_URL" --account <keystore>
@@ -25,6 +25,6 @@ or `FOUNDRY_PROFILE=fork forge test` with `BASE_RPC_URL` set so the `base` RPC e
 
 Switch RPC with `--rpc-url` (HTTPS URL or Foundry alias `base` / `base_sepolia`). Switch the signer per run with `--account`, `--ledger`, `--trezor`, or `DEPLOYER_PRIVATE_KEY` in the environment; the state file never stores keys. Override Aave pins with `--aave-config` or `WETH` / `AAVE_POOL_ADDRESSES_PROVIDER` / `AAVE_POOL` / `AAVE_AWETH`.
 
-`executeStrategyMigration` can only succeed after Grave’s immutable 14-day delay. Re-run the same command after that timestamp (Sepolia may iterate with `--redeploy`). Mainnet broadcasts require `--confirm-mainnet` and abort if the remaining setup is estimated above USD 15 (`ETH_USD_PRICE`, spec §18).
+The first adapter executes in the same run while `activeStrategy` is unset ([NDR-0008](../docs/ndr/0008-initial-strategy-immediate.md)). Replacing a live adapter still requires Grave’s 14-day delay. Sepolia may iterate with `--redeploy`. Mainnet broadcasts require `--confirm-mainnet` and abort if the remaining setup is estimated above USD 15 (`ETH_USD_PRICE`, spec §18).
 
 See `./script/deploy.sh --help`.

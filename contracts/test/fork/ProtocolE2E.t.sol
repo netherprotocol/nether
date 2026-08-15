@@ -239,11 +239,6 @@ contract ProtocolE2EForkTest is Test {
         assertEq(executeAfter, block.timestamp + STRATEGY_DELAY);
 
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(Grave.StrategyDelayNotElapsed.selector, executeAfter));
-        grave.executeStrategyMigration();
-
-        _warpDelay();
-        vm.prank(admin);
         grave.executeStrategyMigration();
 
         assertEq(grave.activeStrategy(), address(adapterA));
@@ -450,6 +445,10 @@ contract ProtocolE2EForkTest is Test {
 
         vm.prank(successor);
         grave.scheduleStrategy(address(adapterB));
+        (, uint256 executeAfter) = grave.pendingStrategy();
+        vm.prank(successor);
+        vm.expectRevert(abi.encodeWithSelector(Grave.StrategyDelayNotElapsed.selector, executeAfter));
+        grave.executeStrategyMigration();
         _warpDelay();
         uint256 navFromA = adapterA.totalAssetsInETH();
         vm.prank(successor);

@@ -349,7 +349,7 @@ One pending slot. `oldStrategy` in events is `activeStrategy` at schedule time (
 3. Store `pending = newAdapter`, `executeAfter = block.timestamp + 14 days`.
 4. Emit `StrategyMigrationScheduled(activeStrategy, newAdapter, executeAfter)`.
 
-The first adapter (from `address(0)`) also waits 14 days. Spec §10.2: strategy changes execute only through the required delay.
+The first adapter (from `address(0)`) MAY be executed immediately ([`NDR-0008`](../ndr/0008-initial-strategy-immediate.md)). Replacement of an already-active adapter still waits 14 days.
 
 ### 8.2 `cancelScheduledStrategy()` (`onlyOwner`)
 
@@ -366,7 +366,8 @@ Cancel is how a recovered admin clears a bad schedule and posts another (new 14-
 One transaction. A revert undoes storage writes and native-ETH sends.
 
 ```text
-require owner, pending set, block.timestamp >= executeAfter
+require owner, pending set
+if activeStrategy != 0: require block.timestamp >= executeAfter
 old = activeStrategy; new = pending adapter
 navBefore = currentNAV()
 if old != 0: try/catch withdrawETH(old.totalAssetsInETH(), address(this))
@@ -394,7 +395,7 @@ Post-migration verification (spec §6.5):
 - no principal to the multisig, deployer, or any EOA
 - no second active adapter
 - no changing era parameters, NETH, Reaper curve, or `protectedPrincipal`
-- no skipping the 14-day delay, including for the first adapter
+- no skipping the 14-day delay when replacing an already-active adapter
 - no executing a different address than the one scheduled
 
 ## 9. No protocol pause
@@ -406,7 +407,7 @@ Grave and Reaper have no `pause` / `unpause`. Spec §6.5 MAY is unused here ([`N
 | `bury()` | yes; `depositETH` try/catch — idle on revert |
 | NETH `transfer` / `approve` / `burn` | yes |
 | `harvest()` | yes, when harvestable ETH is realizable |
-| `executeStrategyMigration()` | yes, after 14 days, `onlyOwner` |
+| `executeStrategyMigration()` | yes, after 14 days when an adapter is active, or immediately when none is; `onlyOwner` |
 | `Reaper.startAuction` | yes, when `availableReaperETH > 0` |
 | `sellToReaper` / `finalizeAuction` | yes |
 | principal `withdraw` | no such function exists |
@@ -524,9 +525,9 @@ Deposit on bury:
 Scheduling / migration:
 
 - `scheduleStrategy` sets `executeAfter = now + 14 days`; emit `StrategyMigrationScheduled`
-- `executeStrategyMigration` before 14 days reverts; after warp, owner executes
-- first adapter from `address(0)` still waits 14 days
-- second `scheduleStrategy` while pending reverts; `cancelScheduledStrategy` clears; a new schedule starts a new 14-day clock
+- `executeStrategyMigration` before 14 days reverts when an adapter is already active; after warp, owner executes
+- first adapter from `address(0)` MAY execute immediately
+- second `scheduleStrategy` while pending reverts; `cancelScheduledStrategy` clears; a replacement schedule starts a new 14-day clock
 - non-owner schedule/execute/cancel reverts
 - migration withdraws from old → Grave → new; owner ETH unchanged; `StrategyMigrated` has `navBefore` / `navAfter`
 - `navAfter < navBefore` allowed (loss during migration)
@@ -557,7 +558,8 @@ post-successful-harvest currentNAV >= protectedPrincipal for an honest adapter
 Reaper can never spend Grave principal
 no admin path can mint NETH
 owner / migration cannot transfer principal to owner
-schedule cannot be executed before 14 days
+schedule cannot be executed before 14 days when an adapter is already active
+first adapter from unset may execute immediately
 executed adapter == scheduled adapter
 only one activeStrategy
 donated ETH never mints NETH and never increases protectedPrincipal
@@ -617,7 +619,7 @@ W4 is done when:
 - `harvest()` is permissionless, non-reentrant, sends only surplus ETH to Reaper, and never decreases `protectedPrincipal`
 - loss-recovery-first holds on the test adapter
 - donations / forced ETH do not mint and do not raise `protectedPrincipal`; they may become harvestable only as NAV surplus
-- strategy changes are scheduled on-chain, wait 14 days, execute only the scheduled adapter, and route recovered ETH Grave → new adapter, never to admin
+- strategy changes are scheduled on-chain, wait 14 days when replacing an active adapter (first adapter may execute immediately), execute only the scheduled adapter, and route recovered ETH Grave → new adapter, never to admin
 - pause is absent on Grave and Reaper; `startAuction` does not read a Grave pause flag
 - Grave admin is `Ownable2Step`; Reaper and NETH have no owner; `renounceOwnership` remains available (W6 must not call it)
 - `NETH.sol` and `EraMath.sol` are unchanged; `src/strategy/` is still empty
