@@ -324,7 +324,7 @@ Checks-effects-interactions: compute `ethHarvested`, then `Address.sendValue(pay
 
 Reaper `receive()` credits `msg.sender == grave` as harvest ([`NIP-0005`](0005-reaper.md) §4.2). ETH that arrives during an active auction stays in `availableReaperETH`, not that auction’s remaining budget.
 
-After realizing and before sending, require `currentNAV() >= protectedPrincipal + ethHarvested` (equivalently: after the send, `currentNAV() >= protectedPrincipal`). If that check fails, revert the whole transaction. That is spec §6.2 on reported NAV. Combined with §7.1, idle principal is not sent when the adapter pays nothing.
+After realizing and before sending, cap `ethHarvested` at `max(0, currentNAV() - protectedPrincipal)` so the send cannot take reported NAV below principal (spec §6.2 / §7). If `currentNAV() < protectedPrincipal` after realization, revert (`HarvestBreachesPrincipal`). If the cap leaves nothing to send, revert (`ZeroHarvest`). Combined with §7.1, idle principal is not sent when the adapter pays nothing. The cap also covers venues such as Aave aTokens, where `balanceOf` rounding can make a full pre-withdraw surplus pull leave remaining NAV 1 wei short: that wei stays idle on Grave as backing instead of aborting harvest.
 
 ### 7.3 Loss then recovery
 

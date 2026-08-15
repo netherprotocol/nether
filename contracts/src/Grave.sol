@@ -125,11 +125,18 @@ contract Grave is ReentrancyGuard, Ownable2Step {
         }
 
         ethHarvested = _realizeHarvest(reportedHarvestable);
+
+        uint256 nav = currentNAV();
+        uint256 principal = protectedPrincipal;
+        if (nav < principal) {
+            revert HarvestBreachesPrincipal();
+        }
+        uint256 maxSendable = nav - principal;
+        if (ethHarvested > maxSendable) {
+            ethHarvested = maxSendable;
+        }
         if (ethHarvested == 0) {
             revert ZeroHarvest();
-        }
-        if (currentNAV() < protectedPrincipal + ethHarvested) {
-            revert HarvestBreachesPrincipal();
         }
 
         Address.sendValue(payable(reaper_), ethHarvested);

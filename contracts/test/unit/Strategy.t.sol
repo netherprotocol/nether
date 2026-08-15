@@ -165,6 +165,45 @@ contract ReenteringAdapter is IStrategyAdapter {
     }
 }
 
+contract RoundingDustAdapter is IStrategyAdapter {
+    address public immutable grave;
+    uint256 public dust;
+
+    constructor(address grave_) {
+        grave = grave_;
+    }
+
+    function setDust(uint256 dust_) external {
+        dust = dust_;
+    }
+
+    function depositETH() external payable {
+        if (msg.sender != grave) revert();
+    }
+
+    function withdrawETH(uint256 amount, address recipient) external returns (uint256 received) {
+        if (msg.sender != grave) revert();
+        uint256 cap = address(this).balance;
+        received = amount < cap ? amount : cap;
+        if (received > 0) {
+            payable(recipient).transfer(received);
+        }
+        uint256 leftover = address(this).balance;
+        uint256 burn = dust < leftover ? dust : leftover;
+        if (burn > 0) {
+            payable(address(0xdead)).transfer(burn);
+        }
+    }
+
+    function totalAssetsInETH() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function underlying() external pure returns (address) {
+        return address(0);
+    }
+}
+
 contract ReenteringReaper {
     Grave public grave;
     bool public attack;
@@ -390,6 +429,23 @@ contract StrategyTest is Test {
         assertEq(grave.harvestableYield(), 0);
         vm.expectRevert(Grave.NoHarvestableYield.selector);
         grave.harvest();
+    }
+
+    function test_harvestClampsWhenWithdrawLeavesWeiBelowPrincipal() public {
+        RoundingDustAdapter dusty = new RoundingDustAdapter(address(grave));
+        _activate(address(dusty));
+        _bury(alice, 2 ether);
+        vm.deal(address(dusty), address(dusty).balance + 0.5 ether);
+        dusty.setDust(1);
+        uint256 surplus = grave.harvestableYield();
+        assertEq(surplus, 0.5 ether);
+        uint256 harvested = grave.harvest();
+        assertEq(harvested, surplus - 1);
+        assertEq(address(reaper).balance, harvested);
+        assertEq(grave.protectedPrincipal(), 2 ether);
+        assertGe(grave.currentNAV(), grave.protectedPrincipal());
+        assertEq(grave.currentNAV(), 2 ether);
+        assertEq(address(grave).balance, 1);
     }
 
     function test_harvestSurplusOnlyAndPostHarvestNav() public {
