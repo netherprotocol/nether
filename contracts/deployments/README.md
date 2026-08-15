@@ -9,4 +9,6 @@ Default paths:
 - `base.json` — Base mainnet (8453)
 - `base-sepolia.json` — Base Sepolia (84532)
 
+`base.json` and `base-sepolia.json` are tracked so the dashboard can read live addresses. Timestamped Sepolia archives stay gitignored.
+
 Sepolia redeploys archive the previous file as `base-sepolia.<UTC timestamp>.json` and start a new family. Mainnet redeploys are refused.

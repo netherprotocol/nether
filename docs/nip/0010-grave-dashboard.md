@@ -1,6 +1,6 @@
 # NIP-0010: Grave dashboard (monitoring slice)
 
-- Status: Proposed (do not implement until this NIP is explicitly started)
+- Status: Implemented
 - Date: 2026-08-15
 - Workstream: W7 (app / monitoring slice)
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
@@ -12,7 +12,6 @@
 
 This plan is the second public frontend slice: a live Grave / Reaper / NETH monitoring page on the existing Astro static site. It reads spec §12 views from Base Sepolia. It does **not** send `bury`, `sellToReaper`, or wallet transactions. Those stay stubs for a later W7 NIP.
 
-Do not run the implementation steps until this NIP is explicitly started.
 
 ## 1. Purpose
 

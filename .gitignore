@@ -4,6 +4,8 @@ contracts/cache/
 contracts/broadcast/
 contracts/artifacts/
 contracts/deployments/*.json
+!contracts/deployments/base.json
+!contracts/deployments/base-sepolia.json
 
 # App environments
 **/node_modules/

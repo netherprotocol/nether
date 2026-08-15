@@ -1,0 +1,14 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { DashboardApp } from '../components/dashboard/DashboardApp.tsx';
+
+const description =
+  'Observe the Grave, Reaper, and $NETH on Base. Live protocol views; burial and Reaper sales ship later.';
+---
+
+<Layout title="Grave — Nether" description={description}>
+  <main>
+    <h1 class="sr-only">Nether Grave</h1>
+    <DashboardApp client:load />
+  </main>
+</Layout>
