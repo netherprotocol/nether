@@ -104,7 +104,7 @@ Spec §6.5 pause is MAY. [`NDR-0005`](../ndr/0005-strategy-security.md): do not 
 
 Do not add `Pausable` to Grave or Reaper. Do not check `grave.paused()` in `startAuction`. Spec §13 `EmergencyPause` / `EmergencyUnpause` are not Grave events in this slice.
 
-If `depositETH` reverts, `bury()` still succeeds and leaves ETH idle (no pause escape hatch). Emit `StrategyDepositFailed` with the adapter revert data ([`NDR-0009`](../ndr/0009-strategy-deposit-failed-event.md)).
+If `depositETH` reverts, `bury()` still succeeds and leaves ETH idle (no pause escape hatch). Emit `StrategyDepositFailed` with the adapter revert data.
 
 ### 3.6 Immediate harvest transfer; `alreadyReservedForReaper` is not stored
 
@@ -227,7 +227,7 @@ If the adapter reverts on `totalAssetsInETH()`, `currentNAV` / `harvestableYield
 
 Burial accounting is unchanged ([`NIP-0004`](0004-grave.md) §4.2): `minNethOut`, `protectedPrincipal += msg.value`, mint, `EraCompleted` / `Buried`, CEI before `neth.mint`.
 
-After mint, if `activeStrategy != address(0)`, try to deposit **all** idle ETH (`address(this).balance`) via `adapter.depositETH{value: idle}()`. On success, emit `StrategyDeposit(strategy, idle)`. On revert, emit `StrategyDepositFailed(strategy, idle, reason)` with the ABI-encoded revert data, leave ETH idle on Grave, and still complete `bury()` ([`NDR-0005`](../ndr/0005-strategy-security.md): no pause escape; [`NDR-0009`](../ndr/0009-strategy-deposit-failed-event.md)). Mint and principal accounting must already be done (CEI).
+After mint, if `activeStrategy != address(0)`, try to deposit **all** idle ETH (`address(this).balance`) via `adapter.depositETH{value: idle}()`. On success, emit `StrategyDeposit(strategy, idle)`. On revert, emit `StrategyDepositFailed(strategy, idle, reason)` with the ABI-encoded revert data, leave ETH idle on Grave, and still complete `bury()` ([`NDR-0005`](../ndr/0005-strategy-security.md): no pause escape). Mint and principal accounting must already be done (CEI).
 
 When no adapter, ETH stays on Grave (W2 behavior). Donations received while an adapter is active sit idle until the next successful deposit-on-bury or a migration execute. Do not add a permissionless `deployIdle()` (not in the spec).
 
