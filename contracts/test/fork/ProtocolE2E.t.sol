@@ -78,13 +78,13 @@ contract ProtocolE2EForkTest is Test {
         assertEq(pool, EXPECTED_POOL);
         assertEq(IAToken(A_WETH).POOL(), EXPECTED_POOL);
 
-        setter = makeAddr("setter");
-        admin = makeAddr("admin");
-        successor = makeAddr("successor");
-        alice = makeAddr("alice");
-        bob = makeAddr("bob");
-        donor = makeAddr("donor");
-        whale = makeAddr("whale");
+        setter = _eoa("nether-e2e-setter");
+        admin = _eoa("nether-e2e-admin");
+        successor = _eoa("nether-e2e-successor");
+        alice = _eoa("nether-e2e-alice");
+        bob = _eoa("nether-e2e-bob");
+        donor = _eoa("nether-e2e-donor");
+        whale = _eoa("nether-e2e-whale");
 
         vm.deal(setter, 100 ether);
         vm.deal(admin, 100 ether);
@@ -505,6 +505,11 @@ contract ProtocolE2EForkTest is Test {
         _assertSelectorAbsent(address(grave), abi.encodeWithSignature("pause()"));
     }
 
+    function _eoa(string memory name) internal returns (address addr) {
+        addr = makeAddr(name);
+        require(addr.code.length == 0, "actor has code");
+    }
+
     function _deployFamily() internal {
         neth = new NETH(setter);
         grave = new Grave(address(neth), admin);
@@ -588,7 +593,7 @@ contract ProtocolE2EForkTest is Test {
         assertEq(IERC20View(VARIABLE_DEBT_WETH).balanceOf(adapter), 0);
     }
 
-    function _assertNoEraCompleted(Vm.Log[] memory logs) internal {
+    function _assertNoEraCompleted(Vm.Log[] memory logs) internal pure {
         bytes32 topic = keccak256("EraCompleted(uint256,uint256,uint256)");
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics.length > 0) {
