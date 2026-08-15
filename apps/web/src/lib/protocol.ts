@@ -1,4 +1,4 @@
-import { createPublicClient, custom, type Address, type PublicClient } from 'viem';
+import { createPublicClient, custom, type Address } from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { graveAbi, nethAbi, reaperAbi } from './abi.ts';
 import type { DeploymentContracts } from './deployments.ts';
@@ -47,7 +47,7 @@ export type ProtocolSnapshot = {
 
 const ZERO: Address = '0x0000000000000000000000000000000000000000';
 
-export function createPoolClient(network: NetworkConfig, pool: StickyRpcPool): PublicClient {
+export function createPoolClient(network: NetworkConfig, pool: StickyRpcPool) {
   const chain = network.chainId === 8453 ? base : baseSepolia;
   return createPublicClient({
     chain,
@@ -60,8 +60,10 @@ export function createPoolClient(network: NetworkConfig, pool: StickyRpcPool): P
   });
 }
 
+export type PoolClient = ReturnType<typeof createPoolClient>;
+
 export async function readSnapshot(
-  client: PublicClient,
+  client: PoolClient,
   contracts: DeploymentContracts,
 ): Promise<ProtocolSnapshot> {
   const [block, results] = await Promise.all([
@@ -115,7 +117,7 @@ export async function readSnapshot(
 }
 
 export async function quoteBuryAmount(
-  client: PublicClient,
+  client: PoolClient,
   grave: Address,
   amount: bigint,
 ): Promise<bigint | null> {
@@ -138,7 +140,7 @@ export async function quoteBuryAmount(
 }
 
 export async function quoteReaperAmount(
-  client: PublicClient,
+  client: PoolClient,
   reaper: Address,
   amount: bigint,
 ): Promise<bigint | null> {

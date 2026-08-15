@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { PublicClient } from 'viem';
 import {
   NETWORK_STORAGE_KEY,
   NETWORKS,
@@ -15,6 +14,7 @@ import {
   quoteBuryAmount,
   quoteReaperAmount,
   readSnapshot,
+  type PoolClient,
   type ProtocolSnapshot,
 } from '../../lib/protocol.ts';
 import {
@@ -46,7 +46,7 @@ export function DashboardApp() {
   const network = NETWORKS[networkId];
   const contracts = useMemo(() => contractsOn(network), [network]);
   const poolRef = useRef<StickyRpcPool | null>(null);
-  const clientRef = useRef<PublicClient | null>(null);
+  const clientRef = useRef<PoolClient | null>(null);
 
   useEffect(() => {
     setNetworkId(resolveNetworkId(window.localStorage.getItem(NETWORK_STORAGE_KEY)));
