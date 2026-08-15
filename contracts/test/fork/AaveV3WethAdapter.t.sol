@@ -53,7 +53,6 @@ contract AaveV3WethAdapterForkTest is Test {
         vm.deal(admin, 10_000 ether);
         vm.prank(admin);
         grave.scheduleStrategy(address(adapter));
-        vm.warp(block.timestamp + 14 days);
         vm.prank(admin);
         grave.executeStrategyMigration();
     }

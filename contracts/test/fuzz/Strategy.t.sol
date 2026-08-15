@@ -125,16 +125,33 @@ contract StrategyFuzzTest is Test {
 
     function testFuzz_cannotExecuteBeforeDelay(uint256 elapsed) public {
         elapsed = bound(elapsed, 0, 14 days - 1);
+        _activate(address(adapter));
         vm.prank(admin);
-        grave.scheduleStrategy(address(adapter));
+        grave.scheduleStrategy(address(adapter2));
         (, uint256 executeAfter) = grave.pendingStrategy();
         vm.warp(block.timestamp + elapsed);
         uint256 adminBefore = admin.balance;
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(Grave.StrategyDelayNotElapsed.selector, executeAfter));
         grave.executeStrategyMigration();
-        assertEq(grave.activeStrategy(), address(0));
+        assertEq(grave.activeStrategy(), address(adapter));
         assertEq(admin.balance, adminBefore);
+    }
+
+    function testFuzz_firstAdapterExecutesImmediately(uint256 extraWarp) public {
+        extraWarp = bound(extraWarp, 0, 14 days - 1);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(adapter));
+        (address scheduled,) = grave.pendingStrategy();
+        vm.warp(block.timestamp + extraWarp);
+        uint256 adminBefore = admin.balance;
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), scheduled);
+        assertEq(grave.activeStrategy(), address(adapter));
+        assertEq(admin.balance, adminBefore);
+        (address pending,) = grave.pendingStrategy();
+        assertEq(pending, address(0));
     }
 
     function testFuzz_executedAdapterEqualsScheduled(uint256 extraWarp) public {

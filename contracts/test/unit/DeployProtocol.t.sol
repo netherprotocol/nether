@@ -14,8 +14,6 @@ import {MockPoolAddressesProvider} from "test/mocks/MockPoolAddressesProvider.so
 contract DeployProtocolTest is Test {
     using stdJson for string;
 
-    uint256 internal constant STRATEGY_DELAY = 14 days;
-
     MockWETH9 internal weth;
     MockAaveV3Pool internal pool;
     MockPoolAddressesProvider internal provider;
@@ -35,7 +33,7 @@ contract DeployProtocolTest is Test {
         vm.deal(successor, 100 ether);
     }
 
-    function test_deploysAndWiresFamilyThenExecutesAfterDelay() public {
+    function test_deploysAndWiresFamilyThenExecutesImmediately() public {
         DeployProtocol script = new DeployProtocol();
         DeployProtocol.RunConfig memory cfg = _fresh(deployer, deployer, "wires", true);
         cfg.skipExecute = false;
@@ -46,27 +44,16 @@ contract DeployProtocolTest is Test {
         assertTrue(first.reaperSet);
         assertTrue(first.adapterDeployed);
         assertTrue(first.strategyScheduled);
-        assertFalse(first.strategyExecuted);
-        assertEq(keccak256(bytes(first.status)), keccak256("waiting_strategy_delay"));
+        assertTrue(first.strategyExecuted);
+        assertEq(keccak256(bytes(first.status)), keccak256("complete"));
         assertEq(NETH(first.neth).grave(), first.grave);
         assertEq(NETH(first.neth).graveSetter(), address(0));
         assertEq(Grave(payable(first.grave)).reaper(), first.reaper);
-        assertEq(Grave(payable(first.grave)).activeStrategy(), address(0));
+        assertEq(Grave(payable(first.grave)).activeStrategy(), first.adapter);
         assertEq(NETH(first.neth).totalSupply(), 0);
         assertEq(Grave(payable(first.grave)).protectedPrincipal(), 0);
         assertFalse(Reaper(payable(first.reaper)).activeAuction().active);
-
-        vm.warp(block.timestamp + STRATEGY_DELAY);
-        DeployProtocol resume = new DeployProtocol();
-        DeployProtocol.FamilyState memory second = resume.execute(cfg);
-        assertEq(second.neth, first.neth);
-        assertEq(second.grave, first.grave);
-        assertEq(second.reaper, first.reaper);
-        assertEq(second.adapter, first.adapter);
-        assertTrue(second.strategyExecuted);
-        assertEq(Grave(payable(second.grave)).activeStrategy(), second.adapter);
-        assertEq(keccak256(bytes(second.status)), keccak256("complete"));
-        assertTrue(second.postChecksPassed);
+        assertTrue(first.postChecksPassed);
     }
 
     function test_resumesFromJsonWithoutRedeploying() public {

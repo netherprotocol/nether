@@ -74,7 +74,7 @@ The existing adapter fork tests wire `setGrave` / `setReaper` / first migration 
 
 The test body deploys and calls. Shared helpers (`_deployFamily`, `_warpDelay`, `_pokeAaveWethIndex`, `_induceAaveSupplyYieldIfNeeded`) are allowed; they must not write Nether or Aave storage.
 
-Negative checks belong **in the beat where they are natural** (harvest before yield, execute before 14 days, old owner after handoff). Do not add a second file of isolated unit-style fork tests.
+Negative checks belong **in the beat where they are natural** (harvest before yield, replacement execute before 14 days, old owner after handoff). Do not add a second file of isolated unit-style fork tests.
 
 A second test function in the same file is allowed only if the primary lifecycle would become unreadable. It must still start from `_deployFamily()` and use only public APIs. Do not pre-execute strategy in `setUp`.
 
@@ -292,13 +292,11 @@ Then follow §3.10 item 2: `bob.startAuction()`. Snapshot era-0 `R`. Alice `sell
 
 Do not start the Aave-yield auction yet.
 
-### Beat 4 — first adapter: schedule, delay, execute (idle ETH into Aave)
+### Beat 4 — first adapter: schedule and execute (idle ETH into Aave)
 
 `admin.scheduleStrategy(adapterA)`. Assert `pendingStrategy` adapter and `executeAfter == block.timestamp + 14 days`.
 
-`admin.executeStrategyMigration()` **before** warp reverts (`StrategyDelayNotElapsed`).
-
-Warp 14 days. `admin.executeStrategyMigration()`.
+`admin.executeStrategyMigration()` succeeds immediately ([`NDR-0008`](../ndr/0008-initial-strategy-immediate.md)); do not require a 14-day warp for this first activation.
 
 Assert:
 
@@ -344,7 +342,7 @@ Follow §3.8 steps 1–3.
 
 ### Beat 9 — migrate Aave → Aave under the successor
 
-Deploy `adapterB = new AaveV3WethAdapter(grave, provider, weth, aWeth)`. Successor schedules, warps 14 days, executes.
+Deploy `adapterB = new AaveV3WethAdapter(grave, provider, weth, aWeth)`. Successor schedules, `executeStrategyMigration` reverts before 14 days, then warps 14 days and executes.
 
 Assert:
 

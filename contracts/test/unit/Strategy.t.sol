@@ -596,9 +596,22 @@ contract StrategyTest is Test {
         assertEq(executeAfter, expected);
     }
 
-    function test_executeBeforeDelayRevertsAndAfterSucceeds() public {
+    function test_firstAdapterExecutesImmediately() public {
+        assertEq(grave.activeStrategy(), address(0));
         vm.prank(admin);
         grave.scheduleStrategy(address(adapter));
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(adapter));
+        (address pending,) = grave.pendingStrategy();
+        assertEq(pending, address(0));
+    }
+
+    function test_executeBeforeDelayRevertsAndAfterSucceeds() public {
+        _activate(address(adapter));
+        TestInvestAdapter adapter2 = new TestInvestAdapter(address(grave));
+        vm.prank(admin);
+        grave.scheduleStrategy(address(adapter2));
         (, uint256 executeAfter) = grave.pendingStrategy();
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(Grave.StrategyDelayNotElapsed.selector, executeAfter));
@@ -607,26 +620,12 @@ contract StrategyTest is Test {
         vm.warp(executeAfter);
         vm.prank(admin);
         grave.executeStrategyMigration();
-        assertEq(grave.activeStrategy(), address(adapter));
+        assertEq(grave.activeStrategy(), address(adapter2));
         (address pending,) = grave.pendingStrategy();
         assertEq(pending, address(0));
     }
 
-    function test_firstAdapterStillWaits14Days() public {
-        assertEq(grave.activeStrategy(), address(0));
-        vm.prank(admin);
-        grave.scheduleStrategy(address(adapter));
-        vm.warp(block.timestamp + 14 days - 1);
-        vm.prank(admin);
-        vm.expectRevert();
-        grave.executeStrategyMigration();
-        vm.warp(block.timestamp + 1);
-        vm.prank(admin);
-        grave.executeStrategyMigration();
-        assertEq(grave.activeStrategy(), address(adapter));
-    }
-
-    function test_secondScheduleWhilePendingRevertsAndCancelRestartsClock() public {
+    function test_secondScheduleWhilePendingRevertsAndCancelClearsSlot() public {
         TestInvestAdapter adapter2 = new TestInvestAdapter(address(grave));
         vm.prank(admin);
         grave.scheduleStrategy(address(adapter));
@@ -641,15 +640,41 @@ contract StrategyTest is Test {
         (address pending,) = grave.pendingStrategy();
         assertEq(pending, address(0));
 
-        uint256 t1 = block.timestamp;
         vm.prank(admin);
         grave.scheduleStrategy(address(adapter2));
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(adapter2));
+    }
+
+    function test_replacementCancelRestartsClock() public {
+        _activate(address(adapter));
+        TestInvestAdapter adapter2 = new TestInvestAdapter(address(grave));
+        TestInvestAdapter adapter3 = new TestInvestAdapter(address(grave));
+        vm.prank(admin);
+        grave.scheduleStrategy(address(adapter2));
+        vm.prank(admin);
+        vm.expectRevert(Grave.StrategyAlreadyPending.selector);
+        grave.scheduleStrategy(address(adapter3));
+
+        vm.expectEmit(true, true, false, true, address(grave));
+        emit StrategyMigrationCancelled(address(adapter), address(adapter2));
+        vm.prank(admin);
+        grave.cancelScheduledStrategy();
+
+        uint256 t1 = block.timestamp;
+        vm.prank(admin);
+        grave.scheduleStrategy(address(adapter3));
         (, uint256 executeAfter) = grave.pendingStrategy();
         assertEq(executeAfter, t1 + 14 days);
         vm.warp(t1 + 14 days - 1);
         vm.prank(admin);
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(Grave.StrategyDelayNotElapsed.selector, executeAfter));
         grave.executeStrategyMigration();
+        vm.warp(executeAfter);
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(adapter3));
     }
 
     function test_cancelRevertsWhenNonePending() public {

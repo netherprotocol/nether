@@ -192,11 +192,10 @@ contract Grave is ReentrancyGuard, Ownable2Step {
             revert NoPendingStrategy();
         }
         uint256 executeAfter = pendingExecuteAfter;
-        if (block.timestamp < executeAfter) {
+        address old = activeStrategy;
+        if (old != address(0) && block.timestamp < executeAfter) {
             revert StrategyDelayNotElapsed(executeAfter);
         }
-
-        address old = activeStrategy;
         uint256 navBefore = _navSnapshot();
 
         if (old != address(0)) {
