@@ -633,7 +633,7 @@ Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md)
 - which Base multisig-capable account receives ownership (W6; reuse existing infrastructure)
 - CREATE2, cost script, explorer verification (W6)
 - accepting the compiler / OZ / Foundry freeze (NDR-0002)
-- keeper language / runtime (W8)
+- keeper ([`NIP-0009`](0009-grave-keeper.md))
 - later safer meta-adapter internals and the moment Grave owner is set to `address(0)` ([`NDR-0005`](../ndr/0005-strategy-security.md))
 
 Pause-of-auction-creation is **not** in this slice ([`NDR-0005`](../ndr/0005-strategy-security.md)). Strategy slot on Grave, harvest-with-W4, and the test invest adapter are already in [`NIP-0000`](0000-the-roadmap.md). `IStrategyAdapter` is spec §6.4. 14-day delay, yield-only Reaper, and loss-recovery-first are spec §6–§7 / §10 / §21. One-time `setReaper` matches the §18.3 deploy order and the NETH `setGrave` shape. `Ownable2Step` is the module [`NIP-0001`](0001-scaffolding.md) reserved for W4; `Pausable` is not. Embedded delay rather than `TimelockController` follows spec §18.2 and NIP-0001 §5. Immediate harvest transfer is spec §6.2’s `alreadyReservedForReaper` after ETH has left Grave. Cancel of a pending schedule is spec §11 propose/cancel plus §16.1 key-compromise / thief-adapter tests.

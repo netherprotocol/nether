@@ -447,7 +447,7 @@ Leave these to later NIPs / NDRs:
 - deploy-script dry run against the same fork (W6)
 - economic simulation (still M0, not this file)
 - accepting NDR-0002
-- keeper driving harvest / `startAuction` / `finalizeAuction` (W8)
+- keeper driving harvest / `startAuction` / `finalizeAuction` (W8). Plan: [`NIP-0009`](0009-grave-keeper.md)
 - NDR-0005 `owner → address(0)` after a safer adapter
 
 WETH wrap-locally, supply-only, aToken NAV, and Base V3 pins remain [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md). Pool is `provider.getPool()` at use ([`NDR-0007`](../ndr/0007-aave-pool-via-provider.md)). Harvest, 14-day delay, and `Ownable2Step` remain [`NIP-0006`](0006-strategy.md). Adapter behavior remains [`NIP-0007`](0007-aave-adapter.md). Era capacity/rate remain spec §5 / [`NIP-0004`](0004-grave.md). Donation vs harvest accounting remains spec §16.2 / [`NIP-0005`](0005-reaper.md) §4.2. Pause stays off Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).
