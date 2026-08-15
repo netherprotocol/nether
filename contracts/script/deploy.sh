@@ -60,6 +60,36 @@ EOF
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+add_foundry_to_path() {
+  local dir
+  for dir in \
+    "${FOUNDRY_BIN:-}" \
+    "$HOME/.foundry/bin" \
+    "$HOME/.cargo/bin" \
+    /opt/homebrew/bin \
+    /usr/local/bin
+  do
+    if [[ -n "$dir" && -x "$dir/forge" && -x "$dir/cast" ]]; then
+      case ":$PATH:" in
+        *":$dir:"*) ;;
+        *) PATH="$dir:$PATH" ;;
+      esac
+      export PATH
+      return 0
+    fi
+  done
+}
+
+ensure_foundry() {
+  add_foundry_to_path
+  if ! command -v forge >/dev/null 2>&1 || ! command -v cast >/dev/null 2>&1; then
+    echo "forge and cast are required (Foundry)." >&2
+    echo "Install: curl -L https://foundry.paradigm.xyz | bash && foundryup" >&2
+    echo "Then retry, or: export PATH=\"\$HOME/.foundry/bin:\$PATH\"" >&2
+    exit 1
+  fi
+}
+
 if [[ -f .env ]]; then
   set -a
   # shellcheck disable=SC1091
@@ -249,6 +279,8 @@ if [[ "$RESUME" -eq 1 && ! -f "$STATE_FILE" ]]; then
   exit 1
 fi
 
+ensure_foundry
+
 echo "Checking RPC chain id..."
 LIVE_CHAIN_ID="$(cast chain-id --rpc-url "$RPC_URL")"
 if [[ "$LIVE_CHAIN_ID" != "$CHAIN_ID" ]]; then
@@ -258,24 +290,34 @@ fi
 echo "RPC ok: $RPC_URL  chainId=$LIVE_CHAIN_ID"
 
 pick_keystore_account() {
-  if ! command -v cast >/dev/null; then
-    echo "cast is required to list keystore accounts" >&2
-    exit 1
-  fi
-  mapfile -t ACCOUNTS < <(cast wallet list 2>/dev/null || true)
-  if [[ ${#ACCOUNTS[@]} -eq 0 ]]; then
+  local list line i=0
+  local accounts=()
+  list="$(cast wallet list 2>/dev/null || true)"
+  if [[ -z "$list" ]]; then
     echo "No Foundry keystore accounts. Create one with: cast wallet import <name> --interactive" >&2
     exit 1
   fi
   echo "Foundry keystore accounts:" >&2
-  local i
-  for i in "${!ACCOUNTS[@]}"; do
-    echo "  $((i + 1))) ${ACCOUNTS[$i]}" >&2
-  done
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    i=$((i + 1))
+    accounts+=("$line")
+    echo "  $i) $line" >&2
+  done <<EOF
+$list
+EOF
+  if [[ "$i" -eq 0 ]]; then
+    echo "No Foundry keystore accounts. Create one with: cast wallet import <name> --interactive" >&2
+    exit 1
+  fi
   local choice
   read -r -p "Select account [1]: " choice
   choice="${choice:-1}"
-  ACCOUNT="${ACCOUNTS[$((choice - 1))]}"
+  if [[ "$choice" -lt 1 || "$choice" -gt "$i" ]]; then
+    echo "Invalid account selection" >&2
+    exit 2
+  fi
+  ACCOUNT="${accounts[$((choice - 1))]}"
 }
 
 if [[ "$STATUS_ONLY" -eq 0 && "$DRY_RUN" -eq 0 ]]; then
