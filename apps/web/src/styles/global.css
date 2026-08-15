@@ -47,6 +47,11 @@ body {
   align-items: center;
 }
 
+.dash-tip-block {
+  display: flex;
+  width: 100%;
+}
+
 .dash-tip-box {
   position: absolute;
   left: 50%;

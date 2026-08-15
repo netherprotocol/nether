@@ -13,6 +13,7 @@ export type NetworkConfig = {
 };
 
 export const NETWORK_STORAGE_KEY = 'nether.network';
+export const NETWORK_CHANGE_EVENT = 'nether:network-change';
 
 export const NETWORKS: Record<NetworkId, NetworkConfig> = {
   base: {
@@ -65,4 +66,39 @@ export function explorerAddressUrl(network: NetworkConfig, address: string): str
 
 export function contractsOn(network: NetworkConfig): DeploymentContracts | undefined {
   return contractsFor(network.chainId);
+}
+
+export function readStoredNetworkId(): NetworkId {
+  if (typeof window === 'undefined') {
+    return firstEnabledNetworkId();
+  }
+  return resolveNetworkId(window.localStorage.getItem(NETWORK_STORAGE_KEY));
+}
+
+export function persistNetworkId(id: NetworkId): void {
+  if (!NETWORKS[id].enabled) {
+    return;
+  }
+  window.localStorage.setItem(NETWORK_STORAGE_KEY, id);
+  window.dispatchEvent(new CustomEvent<NetworkId>(NETWORK_CHANGE_EVENT, { detail: id }));
+}
+
+export function subscribeNetworkChange(onChange: (id: NetworkId) => void): () => void {
+  const onCustom = (event: Event) => {
+    const id = (event as CustomEvent<NetworkId>).detail;
+    if (id === 'base' || id === 'base-sepolia') {
+      onChange(resolveNetworkId(id));
+    }
+  };
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === NETWORK_STORAGE_KEY) {
+      onChange(resolveNetworkId(event.newValue));
+    }
+  };
+  window.addEventListener(NETWORK_CHANGE_EVENT, onCustom);
+  window.addEventListener('storage', onStorage);
+  return () => {
+    window.removeEventListener(NETWORK_CHANGE_EVENT, onCustom);
+    window.removeEventListener('storage', onStorage);
+  };
 }

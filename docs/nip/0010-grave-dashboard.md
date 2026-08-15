@@ -29,7 +29,7 @@ Unblock a later wallet / bury / sell NIP on the same route without rewriting the
 In scope:
 
 - New route `/grave` (with `base: /nether/` → `/nether/grave`)
-- Unlock **Enter the Grave** on the holder and in the header so it navigates to `/grave`
+- Unlock **Enter the Grave** on the holder hero so it navigates to `/grave`; header uses a Grave tab plus the network switch
 - Client island that reads spec §12 views (plus a few supporting getters already on the contracts) via `viem`
 - Screenshot layout: top stats, GRAVE, REAPER, $NETH — **without** the `1.` / `2.` / `3.` prefixes
 - Network switch: Base mainnet (product default, **disabled**) and Base Sepolia (**enabled**, current live target)
@@ -64,10 +64,10 @@ Do not implement redemption, a peg, or Reaper-pays-holders copy.
 Header after this slice:
 
 - **Nether** (left, serif) → `/`
-- **DOCS** · **SOURCE** (center, existing)
-- **Enter the Grave** (right) → `/grave` (no longer `aria-disabled`)
+- **GRAVE** · **DOCS** · **SOURCE** (center). Grave is the first tab and links to `/grave`
+- **Base / Base Sepolia** switch (right). Same control as §5 — not a second copy in $NETH
 
-Do not add GRAVE / KEEPERS / CONNECT to the center nav. Network switching lives in the $NETH section, not the header.
+The holder hero still has **Enter the Grave** → `/grave`. That CTA is not repeated in the header. Do not add KEEPERS or CONNECT to the center nav.
 
 Remove `GRAVE_LOCKED_HINT` once the CTA is a link. Do not keep a “not dug yet” tooltip on a working route.
 
@@ -148,7 +148,7 @@ Right column: stub **Bury** widget (screenshot layout).
 
 If a typed bury would cross an era boundary, show a short breakdown (ETH in this era vs next, NETH from each). That is spec §14, not extra product copy.
 
-Token selectors in the stub are display-only (ETH in, NETH out). They are not a menu of other assets.
+The bury input token chip is a static **ETH** label with no dropdown chevron. Only ETH can be buried. The **BURY ETH** button is a full-width block below the rate line (not inline with the rate / info icon).
 
 ### 4.5 REAPER (no leading number)
 
@@ -180,10 +180,10 @@ Balance line: **Balance: —**.
 Single row:
 
 - Title: **$NETH**. Subtitle: **ERC-20 token on Base**
-- **Network** control (§5)
 - Total supply: `NETH.totalSupply()`
-- Contract address: deployment JSON, Basescan link
-- **CONTRACT DETAILS** disclosure (chevron). Expanded body: name `Nether`, symbol `NETH`, 18 decimals, Grave / Reaper / adapter addresses, chain id. No extra marketing.
+- Contract address: NETH from the deployment JSON, Basescan link
+- Token fields always visible (not a disclosure): name `Nether`, symbol `NETH`, 18 decimals, chain id, selected network name
+- Do not repeat Grave / Reaper / adapter addresses here; those stay in the GRAVE and REAPER sections
 
 ## 5. Network switch
 
@@ -196,7 +196,7 @@ Two networks, one selected:
 
 Behavior:
 
-- Control sits in the $NETH **Network** slot (segmented control, not a free-text dropdown).
+- Control sits in the site header (right slot), segmented, not a free-text dropdown. Grave / Reaper / adapter addresses all follow the selected network, so the switch must not live only in $NETH.
 - Base is rendered as the default network of the protocol and is `disabled` / `aria-disabled`, with a short reason: mainnet deployment is not live.
 - Base Sepolia is the only enabled option. Initial selection is Sepolia. Do not leave the UI on a disabled network.
 - Persist the enabled selection in `localStorage` under a namespaced key (e.g. `nether.network`) so a later slice can honor a mainnet choice without a redesign.
@@ -294,7 +294,11 @@ Format ETH / NETH with grouping and a small number of fraction digits (trim trai
 
 ### 7.3 Loading and chain errors (not RPC-down)
 
-First paint: skeleton / em-dash values inside the dashboard chrome, not a blank page.
+First paint: if `localStorage` has a snapshot for the selected network (`nether.snapshot.{networkId}`), show that immediately. Otherwise skeleton / em-dash values inside the dashboard chrome, not a blank page. On each successful RPC read, write the snapshot back and update the view.
+
+The holder protocol facts (Grave size, $NETH supply, current burial rate, Grave address) use the same live snapshot for the selected network. They are not hardcoded once a snapshot (cached or live) exists.
+
+If the RPC pool is down but a cached snapshot exists, keep showing it with an inline retry banner. The full-page RPC-unavailable screen is only for a cold load with no cache.
 
 If the RPC pool is healthy but a contract call reverts or returns nonsense (wrong chain id, empty bytecode at Grave), show an inline error in the dashboard: the selected network’s contracts could not be read. That is distinct from §8.3 (all RPCs unreachable).
 
@@ -392,6 +396,7 @@ Add `apps/web` unit tests with `node:test` (same style as `docs.test.ts` and the
 - RPC pool: first URL success stays sticky; first URL fail then second success sticks on the second; all fail surfaces the outage; chain-id mismatch counts as failure
 - Formatters: wei → ETH/NETH strings, address truncate, duration `2d 14h 21m`, era remaining ETH, progress percent
 - Network config: Sepolia enabled, Base disabled, explorer origin follows selection
+- Snapshot cache: bigint fields round-trip through JSON strings; corrupt payloads are ignored
 
 Do not require a live RPC in CI. Stub HTTP/JSON-RPC in process; no Mockito-style mock library.
 
@@ -406,8 +411,8 @@ Do not run these until this NIP is explicitly started.
 3. Typed network + deployment + ABI modules; RPC pool with tests.
 4. `/grave` page chrome (Astro) + React island for live state.
 5. Map §4 fields to the snapshot; skeletons; RPC-unavailable screen; stub bury/sell.
-6. Unlock header/hero CTA to `/grave`; drop the locked tooltip.
-7. Network switch in $NETH as specified.
+6. Unlock the holder hero CTA to `/grave`; put Grave first in the header nav; drop the locked tooltip.
+7. Network switch in the header; persist snapshots in `localStorage`; holder stats read the same snapshot.
 8. Wire web CI tests; `npm run build` still emits static HTML for `/` and `/docs`.
 
 ## 13. Acceptance criteria
@@ -417,7 +422,9 @@ This slice is done when:
 - `/grave` matches the screenshot layout (dark cards, accent, four top stats, GRAVE / REAPER / $NETH **without numbers**) using Lucide icons only
 - Numbers on Sepolia come from the §6 contracts via the §8 pool, not from mock copy
 - “ETH remaining in era” is capacity remaining, not a fake era timer
-- Base mainnet is visible in the switch and disabled; Sepolia is selected and live
+- Base mainnet is visible in the header switch and disabled; Sepolia is selected and live
+- Header has Grave as the first tab; the Base / Base Sepolia switch is in the header, not in $NETH
+- Holder protocol facts come from the selected network’s contracts (or the last cached snapshot)
 - Bury / sell buttons are visible and do not send transactions or open a wallet
 - Killing / blocking every pooled RPC shows **Base Sepolia RPC is currently unavailable** with Sepolia Basescan links and a retry control
 - Holder **Enter the Grave** reaches `/grave`

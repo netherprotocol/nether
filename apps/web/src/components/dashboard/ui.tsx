@@ -1,11 +1,19 @@
 import type { ReactNode } from 'react';
-import { ChevronDown, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { explorerAddressUrl, type NetworkConfig } from '../../lib/networks.ts';
 import { truncateAddress } from '../../lib/format.ts';
 
-export function Tip({ text, children }: { text: string; children: ReactNode }) {
+export function Tip({
+  text,
+  children,
+  block,
+}: {
+  text: string;
+  children: ReactNode;
+  block?: boolean;
+}) {
   return (
-    <span className="dash-tip">
+    <span className={block ? 'dash-tip dash-tip-block' : 'dash-tip'}>
       {children}
       <span role="tooltip" className="dash-tip-box">
         {text}
@@ -53,7 +61,6 @@ export function TokenChip({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[0.68rem] tracking-[0.14em] text-paper uppercase">
       {label}
-      <ChevronDown className="h-3 w-3 opacity-70" strokeWidth={1.5} aria-hidden="true" />
     </span>
   );
 }

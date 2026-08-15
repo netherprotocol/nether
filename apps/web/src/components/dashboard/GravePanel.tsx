@@ -157,13 +157,13 @@ export function GravePanel({
               ))}
             </ul>
           ) : null}
-          <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted">
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-muted">
             Rate: {snapshot ? formatNethPerEth(snapshot.quoteBuryOneEth) : '—'}
             <Tip text="Live quote from Grave.quoteBury(1 ETH).">
               <Info className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
             </Tip>
           </p>
-          <Tip text="Wallet burial ships in a later release.">
+          <Tip block text="Wallet burial ships in a later release.">
             <button
               type="button"
               disabled

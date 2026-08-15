@@ -1,118 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  NETWORK_STORAGE_KEY,
-  NETWORKS,
-  contractsOn,
-  firstEnabledNetworkId,
-  resolveNetworkId,
-  type NetworkId,
-} from '../../lib/networks.ts';
+import { useEffect, useState } from 'react';
 import { parseAmount } from '../../lib/format.ts';
-import {
-  createPoolClient,
-  quoteBuryAmount,
-  quoteReaperAmount,
-  readSnapshot,
-  type PoolClient,
-  type ProtocolSnapshot,
-} from '../../lib/protocol.ts';
-import {
-  RPC_STICKY_PREFIX,
-  StickyRpcPool,
-  isRpcUnavailable,
-  rootErrorMessage,
-  sessionStickyStore,
-} from '../../lib/rpcPool.ts';
+import { quoteBuryAmount, quoteReaperAmount } from '../../lib/protocol.ts';
+import { useLiveSnapshot } from '../useLiveSnapshot.ts';
 import { GravePanel } from './GravePanel.tsx';
 import { NethBar } from './NethBar.tsx';
 import { ReaperPanel } from './ReaperPanel.tsx';
 import { RpcDown } from './RpcDown.tsx';
 import { TopStats } from './TopStats.tsx';
 
-const POLL_MS = 12_000;
-
 export function DashboardApp() {
-  const [networkId, setNetworkId] = useState<NetworkId>(firstEnabledNetworkId());
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'rpc-down' | 'read-error'>('loading');
-  const [snapshot, setSnapshot] = useState<ProtocolSnapshot | null>(null);
-  const [readError, setReadError] = useState<string | null>(null);
-  const [retryNonce, setRetryNonce] = useState(0);
+  const { network, contracts, snapshot, phase, readError, retry, poolRef, clientRef } =
+    useLiveSnapshot();
   const [buryInput, setBuryInput] = useState('');
   const [sellInput, setSellInput] = useState('');
   const [buryQuote, setBuryQuote] = useState<bigint | null>(0n);
   const [sellQuote, setSellQuote] = useState<bigint | null>(0n);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-
-  const network = NETWORKS[networkId];
-  const contracts = useMemo(() => contractsOn(network), [network]);
-  const poolRef = useRef<StickyRpcPool | null>(null);
-  const clientRef = useRef<PoolClient | null>(null);
-
-  useEffect(() => {
-    setNetworkId(resolveNetworkId(window.localStorage.getItem(NETWORK_STORAGE_KEY)));
-  }, []);
-
-  useEffect(() => {
-    if (!network.enabled || !contracts) {
-      return;
-    }
-    const pool = new StickyRpcPool(
-      network.rpcUrls,
-      network.chainId,
-      network.name,
-      sessionStickyStore(),
-      `${RPC_STICKY_PREFIX}${network.id}`,
-      globalThis.fetch.bind(globalThis),
-    );
-    poolRef.current = pool;
-    clientRef.current = createPoolClient(network, pool);
-
-    let cancelled = false;
-    const load = async (force = false) => {
-      if (!force && document.hidden) {
-        return;
-      }
-      try {
-        const next = await readSnapshot(clientRef.current!, contracts);
-        if (cancelled) {
-          return;
-        }
-        setSnapshot(next);
-        setPhase('ready');
-        setReadError(null);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        console.error('Nether dashboard read failed', error);
-        if (isRpcUnavailable(error)) {
-          setPhase('rpc-down');
-          setSnapshot(null);
-          return;
-        }
-        setPhase('read-error');
-        setReadError(
-          rootErrorMessage(error, 'The selected network’s contracts could not be read.'),
-        );
-      }
-    };
-
-    void load(true);
-    const timer = window.setInterval(() => {
-      void load(false);
-    }, POLL_MS);
-    const onVisibility = () => {
-      if (!document.hidden) {
-        void load(true);
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [networkId, retryNonce]);
 
   useEffect(() => {
     const client = clientRef.current;
@@ -133,18 +35,13 @@ export function DashboardApp() {
           setBuryQuote(quoted);
         }
       })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-        if (isRpcUnavailable(error)) {
-          setPhase('rpc-down');
-        }
+      .catch(() => {
+        // Snapshot polling already surfaces RPC loss.
       });
     return () => {
       cancelled = true;
     };
-  }, [buryInput, phase, snapshot, contracts]);
+  }, [buryInput, phase, snapshot, contracts, clientRef, poolRef]);
 
   useEffect(() => {
     const client = clientRef.current;
@@ -168,36 +65,15 @@ export function DashboardApp() {
           setSellQuote(quoted);
         }
       })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-        if (isRpcUnavailable(error)) {
-          setPhase('rpc-down');
-        }
+      .catch(() => {
+        // Snapshot polling already surfaces RPC loss.
       });
     return () => {
       cancelled = true;
     };
-  }, [sellInput, phase, snapshot, contracts]);
+  }, [sellInput, phase, snapshot, contracts, clientRef, poolRef]);
 
-  const selectNetwork = (id: NetworkId) => {
-    if (!NETWORKS[id].enabled) {
-      return;
-    }
-    window.localStorage.setItem(NETWORK_STORAGE_KEY, id);
-    setNetworkId(id);
-    setPhase('loading');
-    setSnapshot(null);
-  };
-
-  const retry = () => {
-    poolRef.current?.resetToStart();
-    setPhase('loading');
-    setRetryNonce((value) => value + 1);
-  };
-
-  if (phase === 'rpc-down') {
+  if (phase === 'rpc-down' && !snapshot) {
     return (
       <div className="px-5 py-10 md:px-10 md:py-14">
         <RpcDown network={network} contracts={contracts} onRetry={retry} />
@@ -207,9 +83,16 @@ export function DashboardApp() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-5 py-6 md:px-10 md:py-8">
-      {phase === 'read-error' ? (
-        <p className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-paper" role="alert">
-          <span>{readError ?? 'The selected network’s contracts could not be read.'}</span>
+      {phase === 'read-error' || (phase === 'rpc-down' && snapshot) ? (
+        <p
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-paper"
+          role="alert"
+        >
+          <span>
+            {phase === 'rpc-down'
+              ? `${network.name} RPC is currently unavailable. Showing the last saved snapshot.`
+              : (readError ?? 'The selected network’s contracts could not be read.')}
+          </span>
           <button
             type="button"
             className="bg-accent px-3 py-1.5 text-[0.65rem] tracking-[0.18em] text-white uppercase"
@@ -236,14 +119,7 @@ export function DashboardApp() {
         sellQuote={sellQuote}
         onSellInput={setSellInput}
       />
-      <NethBar
-        snapshot={snapshot}
-        network={network}
-        contracts={contracts}
-        detailsOpen={detailsOpen}
-        onToggleDetails={() => setDetailsOpen((open) => !open)}
-        onSelectNetwork={selectNetwork}
-      />
+      <NethBar snapshot={snapshot} network={network} contracts={contracts} />
     </div>
   );
 }

@@ -130,7 +130,7 @@ export function ReaperPanel({
             <p className="mt-3 text-xs text-muted">
               Current rate: {snapshot ? formatEthPerNeth(snapshot.currentReaperRate) : '—'}
             </p>
-            <Tip text="Wallet Reaper sales ship in a later release.">
+            <Tip block text="Wallet Reaper sales ship in a later release.">
               <button
                 type="button"
                 disabled

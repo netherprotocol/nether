@@ -1,18 +1,12 @@
 ---
 import { PRIMARY_CTA, withBase } from '../lib/site';
 
-interface Props {
-  placement?: 'header' | 'hero';
-}
-
-const { placement = 'hero' } = Astro.props;
 const href = withBase('grave');
-const buttonClass =
-  placement === 'header'
-    ? 'inline-block bg-accent px-3 py-2 text-[0.62rem] tracking-[0.2em] text-white uppercase md:px-4 md:text-[0.68rem]'
-    : 'inline-block bg-accent px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase';
 ---
 
-<a href={href} class={buttonClass}>
+<a
+  href={href}
+  class="inline-block bg-accent px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase"
+>
   {PRIMARY_CTA}
 </a>
