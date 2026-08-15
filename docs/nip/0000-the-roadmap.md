@@ -193,7 +193,7 @@ These are not extra product features. They constrain when a milestone is done.
 
 ### 4.1 Tests (every contract workstream; M0 gate)
 
-Spec §17: Foundry unit tests, fuzz/property tests, Base fork tests, stateful invariants, and the §15.3 yield scenarios including 0% yield solvency. Economic simulation is part of M0, not a substitute for invariants. Adapter-focused Base fork tests ship with W5 ([`NIP-0007`](0007-aave-adapter.md)). The family lifecycle against live WETH9 and Aave (init, bury, harvest, Reaper auction, Aave-to-Aave migration, ownership handoff) is [`NIP-0008`](0008-e2e-fork-suite.md).
+Spec §17: Foundry unit tests, fuzz/property tests, Base fork tests, stateful invariants, and the §15.3 yield scenarios including 0% yield solvency. Economic simulation is part of M0, not a substitute for invariants. Adapter-focused Base fork tests ship with W5 ([`NIP-0007`](0007-aave-adapter.md)). The family lifecycle against live WETH9 and Aave (init, bury, era changes, Grave/Reaper donations, harvest, Reaper auction, Aave-to-Aave migration, ownership handoff) is [`NIP-0008`](0008-e2e-fork-suite.md).
 
 ### 4.2 Spec §22 artifacts (before M2)
 
