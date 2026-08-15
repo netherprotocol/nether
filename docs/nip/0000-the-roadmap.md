@@ -11,6 +11,7 @@
 - Strategy: [`0006-strategy.md`](0006-strategy.md)
 - Aave adapter: [`0007-aave-adapter.md`](0007-aave-adapter.md)
 - E2E fork suite: [`0008-e2e-fork-suite.md`](0008-e2e-fork-suite.md)
+- Gravekeeper: [`0009-grave-keeper.md`](0009-grave-keeper.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
@@ -43,7 +44,7 @@ A DEX market is not required for M1 or M2 (§9, §23).
 | 5 | Investment interface, yield to Reaper, strategy governance | **W4** | [`NIP-0006`](0006-strategy.md); harvest, timelock, **test invest adapter**. Pause is not on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)) |
 | 6 | AAVE pool for MVP | **W5** | [`NIP-0007`](0007-aave-adapter.md); venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) |
 | 7 | Landing site and dashboard | **W7** | Two surfaces, one workstream; FE stack [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
-| 8 | Grave Keeper (cranker) bot | **W8** | Pair with observability |
+| 8 | Grave Keeper (cranker) bot | **W8** | [`NIP-0009`](0009-grave-keeper.md); pair with observability; indexer still TBD |
 | 9 | Aerodrome market (optional) | **W9** | After M2; outside the trust boundary |
 | — | *(not in the starting layout)* | **W6** | Deployment / Sepolia / mainnet kit (§18) |
 | — | *(not in the starting layout)* | M2 gates | Audit and §22 design artifacts |
@@ -171,15 +172,17 @@ W7 landing can start before contracts exist. The app surface can start against t
 
 `harvest()`, auction start, and auction finalize are permissionless. The keeper is an operator convenience, not a privileged role. Spec §7: production default keeper incentive is zero; any incentive must not come from protected principal.
 
+Detailed plan: [`0009-grave-keeper.md`](0009-grave-keeper.md).
+
 Keeper loop (minimum):
 
 - harvest when harvestable yield is realizable
 - start a Reaper auction when ETH is available and none is active
 - finalize expired auctions
 
-The keeper lives under `apps/keeper/` with its own environment. Language and runtime are TBD when W8 starts; record that choice as an NDR then.
+The keeper lives under `apps/keeper/` with its own environment. It is a cross-platform Node + TypeScript console app using `viem`, reusing the web toolchain majors from [`NDR-0003`](../ndr/0003-frontend-stack.md) (Node 22, TypeScript 5.9.3, npm) without extending that NDR’s freeze to Gravekeeper. Paid calls are view-checked, simulated, and skipped when the moved ETH is not worth Base gas (including OP-stack L1 fee). Operator gas is logged. No keeper-stack NDR in this slice ([`NIP-0009`](0009-grave-keeper.md)).
 
-Observability (§19) belongs with this workstream: issuance and burn history, NAV, harvests, auctions, strategy address changes, and alerts (NAV below principal, role changes, harvest failures, migration schedule, and adapter pause if a later adapter has one). M3 is the production hardening of this surface.
+Observability (§19) belongs with this workstream. [`NIP-0009`](0009-grave-keeper.md) ships keeper-local alerts and a gas ledger. Issuance/burn history, auction fill-rate series, and a public Keepers page wait on an indexer / later UI NIP. M3 is the production hardening of this surface.
 
 Indexer technology is still TBD; record it in an NDR when W8 needs one. Do not couple it to NDR-0003.
 
@@ -224,7 +227,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | Initial strategy | Aave V3 Base, supply-only WETH. [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). |
 | Reaper minimum budget | None. Leftover pre-1.0 wording in the spec was cleaned to match §21. See [`NIP-0005`](0005-reaper.md). |
 | Frontend stack | [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md). Indexer still TBD (W8). |
-| Keeper language / runtime | TBD when W8 requires a choice; then an NDR. |
+| Keeper language / runtime | Node 22 + TypeScript 5.9.3 + viem console app under `apps/keeper/`. Plan: [`NIP-0009`](0009-grave-keeper.md). No NDR in that slice. |
 | Repo layout | Isolated `contracts/`, `apps/web/`, and `apps/keeper/` trees. See [`NIP-0001`](0001-scaffolding.md). |
 | NETH mint lock | One-time `setGrave`, then immutable; no standing admin. See [`NIP-0003`](0003-neth.md). |
 | Toolchain versions | Proposed in [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md); not frozen until that NDR is accepted. |
@@ -251,7 +254,7 @@ Do not accept these until the question is actually being decided. A Proposed rec
 | Initial production strategy (Aave V3 WETH) | W5 | Venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). Pool lookup [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md) (Accepted). Plan: [`NIP-0007`](0007-aave-adapter.md) (Implemented) |
 | Frontend framework | W7 landing | [`NDR-0003`](../ndr/0003-frontend-stack.md) (Accepted). Plan: [`NIP-0002`](0002-landing-docs.md) |
 | Indexer | W8 | Still TBD; live views can use §12 + RPC without one |
-| Keeper language / runtime | W8 | When a stack must be chosen |
+| Keeper language / runtime | W8 | Chosen in [`NIP-0009`](0009-grave-keeper.md) (TypeScript/Node/viem). Version freeze NDR only if M3 needs a pin |
 | Any Aerodrome/LP design | W9 | Must not touch v1 monetary contracts |
 
 Routine mechanical work (typos, tests that restore documented behavior) does not need an NDR. Revising this roadmap does not need an NDR.
@@ -271,7 +274,7 @@ W0 scaffold
 M0 gate: W1–W5 tests, invariants, economic sim, Base fork tests ([`NIP-0008`](0008-e2e-fork-suite.md))
  ├─ W6 Sepolia deploy kit
  ├─ W7 frontend (holder/docs: [`NIP-0002`](0002-landing-docs.md); app screens after W2/W3 views)
- └─ W8 keeper + indexing (can start after harvest/auction exist)
+ └─ W8 keeper ([`NIP-0009`](0009-grave-keeper.md); indexer still TBD)
 
 M1: Sepolia + frontend
 Audit + §22 artifacts

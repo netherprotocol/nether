@@ -244,7 +244,7 @@ This slice is done when:
 Leave these to later NDRs / NIPs:
 
 - Indexer (W8)
-- Gravekeeper language (W8)
+- Gravekeeper ([`NIP-0009`](0009-grave-keeper.md))
 - Bury / Reaper / Grave dashboard application screens (later W7 NIP)
 - Wallet kit and RPC provider
 - Custom domain

@@ -64,7 +64,7 @@ There is **no** root `package.json`, `pnpm-workspace.yaml`, or `requirements.txt
 |---|---|---|---|
 | `contracts/` | Foundry / solc | W0 | This NIP + Proposed NDR-0002 |
 | `apps/web/` | JavaScript/TypeScript (expected) | W7 | [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md) |
-| `apps/keeper/` | Own runtime | W8 | TBD; NDR when chosen |
+| `apps/keeper/` | Own runtime | W8 | [`NIP-0009`](0009-grave-keeper.md) (Node 22 + TypeScript + viem CLI) |
 | `docs/` | Markdown | ongoing | — |
 
 Landing and dashboard are two surfaces and one frontend environment (`apps/web/`). Split that tree later only if W7 needs two independent apps. Do not mix it with `contracts/` or `apps/keeper/`.
@@ -253,10 +253,11 @@ W0 is done when:
 
 ## 11. Not decided here
 
-Leave these to later NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
+Leave these to later NIPs / NDRs, as queued in [`NIP-0000`](0000-the-roadmap.md):
 
 - Accepting the compiler / OZ / Foundry freeze (NDR-0002)
 - Frontend freeze (NDR-0003, Accepted); indexer remains TBD (W8)
-- Gravekeeper language and runtime
 - Initial production strategy (venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md); plan [`NIP-0007`](0007-aave-adapter.md))
 - Any `IStrategyAdapter` surface change
+
+Gravekeeper language and runtime are [`NIP-0009`](0009-grave-keeper.md) (no NDR in that slice).

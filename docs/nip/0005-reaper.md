@@ -205,7 +205,7 @@ Only one active auction at a time.
 3. `ethRolledOver = ethRemaining`; add it to `availableReaperETH`; set `ethRemaining = 0`; `active = false`.
 4. Emit `ReapingFinalized(id, ethBudget - ethRolledOver, nethBurned, ethRolledOver)`.
 
-Do not auto-start the next auction. W8’s keeper loop is start and finalize as separate permissionless calls ([`NIP-0000`](0000-the-roadmap.md) W8).
+Do not auto-start the next auction. W8’s keeper loop is start and finalize as separate permissionless calls ([`NIP-0009`](0009-grave-keeper.md)).
 
 After finalize, `currentReaperRate()` is 0 until the next start. Leave the last struct in storage with `active = false` so `activeAuction()` can still show the most recent id/budget; `active` is the live flag.
 
