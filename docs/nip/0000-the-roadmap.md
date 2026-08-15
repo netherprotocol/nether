@@ -10,6 +10,7 @@
 - Reaper: [`0005-reaper.md`](0005-reaper.md)
 - Strategy: [`0006-strategy.md`](0006-strategy.md)
 - Aave adapter: [`0007-aave-adapter.md`](0007-aave-adapter.md)
+- E2E fork suite: [`0008-e2e-fork-suite.md`](0008-e2e-fork-suite.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
@@ -192,7 +193,7 @@ These are not extra product features. They constrain when a milestone is done.
 
 ### 4.1 Tests (every contract workstream; M0 gate)
 
-Spec §17: Foundry unit tests, fuzz/property tests, Base fork tests, stateful invariants, and the §15.3 yield scenarios including 0% yield solvency. Economic simulation is part of M0, not a substitute for invariants.
+Spec §17: Foundry unit tests, fuzz/property tests, Base fork tests, stateful invariants, and the §15.3 yield scenarios including 0% yield solvency. Economic simulation is part of M0, not a substitute for invariants. Adapter-focused Base fork tests ship with W5 ([`NIP-0007`](0007-aave-adapter.md)). The family lifecycle against live WETH9 and Aave (init, bury, era changes, Grave/Reaper donations, harvest, Reaper auction, Aave-to-Aave migration, ownership handoff) is [`NIP-0008`](0008-e2e-fork-suite.md).
 
 ### 4.2 Spec §22 artifacts (before M2)
 
@@ -263,10 +264,11 @@ W0 scaffold
      ├─ W2 Grave ([`NIP-0004`](0004-grave.md); era math library → bury → reckoning / EraCompleted → idle ETH)
      │    └─ W4 strategy interface, harvest, timelock, test invest adapter ([`NIP-0006`](0006-strategy.md))
      │         └─ W5 production adapter ([`NIP-0007`](0007-aave-adapter.md); [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
+     │              └─ M0 e2e fork ([`NIP-0008`](0008-e2e-fork-suite.md); live WETH9 + Aave family lifecycle)
      └─ W3 Reaper ([`NIP-0005`](0005-reaper.md); can overlap W2 once NETH exists)
             └─ W4 harvest credits Reaper (no pause of auction creation)
 
-M0 gate: W1–W5 tests, invariants, economic sim, Base fork tests
+M0 gate: W1–W5 tests, invariants, economic sim, Base fork tests ([`NIP-0008`](0008-e2e-fork-suite.md))
  ├─ W6 Sepolia deploy kit
  ├─ W7 frontend (holder/docs: [`NIP-0002`](0002-landing-docs.md); app screens after W2/W3 views)
  └─ W8 keeper + indexing (can start after harvest/auction exist)
