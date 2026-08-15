@@ -104,7 +104,7 @@ Spec §6.5 pause is MAY. [`NDR-0005`](../ndr/0005-strategy-security.md): do not 
 
 Do not add `Pausable` to Grave or Reaper. Do not check `grave.paused()` in `startAuction`. Spec §13 `EmergencyPause` / `EmergencyUnpause` are not Grave events in this slice.
 
-If `depositETH` reverts, `bury()` still succeeds and leaves ETH idle (no pause escape hatch).
+If `depositETH` reverts, `bury()` still succeeds and leaves ETH idle (no pause escape hatch). Emit `StrategyDepositFailed` with the adapter revert data ([`NDR-0009`](../ndr/0009-strategy-deposit-failed-event.md)).
 
 ### 3.6 Immediate harvest transfer; `alreadyReservedForReaper` is not stored
 
@@ -227,7 +227,7 @@ If the adapter reverts on `totalAssetsInETH()`, `currentNAV` / `harvestableYield
 
 Burial accounting is unchanged ([`NIP-0004`](0004-grave.md) §4.2): `minNethOut`, `protectedPrincipal += msg.value`, mint, `EraCompleted` / `Buried`, CEI before `neth.mint`.
 
-After mint, if `activeStrategy != address(0)`, try to deposit **all** idle ETH (`address(this).balance`) via `adapter.depositETH{value: idle}()`. On success, emit `StrategyDeposit(strategy, idle)`. On revert, leave ETH idle on Grave and still complete `bury()` ([`NDR-0005`](../ndr/0005-strategy-security.md): no pause escape). Mint and principal accounting must already be done (CEI).
+After mint, if `activeStrategy != address(0)`, try to deposit **all** idle ETH (`address(this).balance`) via `adapter.depositETH{value: idle}()`. On success, emit `StrategyDeposit(strategy, idle)`. On revert, emit `StrategyDepositFailed(strategy, idle, reason)` with the ABI-encoded revert data, leave ETH idle on Grave, and still complete `bury()` ([`NDR-0005`](../ndr/0005-strategy-security.md): no pause escape; [`NDR-0009`](../ndr/0009-strategy-deposit-failed-event.md)). Mint and principal accounting must already be done (CEI).
 
 When no adapter, ETH stays on Grave (W2 behavior). Donations received while an adapter is active sit idle until the next successful deposit-on-bury or a migration execute. Do not add a permissionless `deployIdle()` (not in the spec).
 
@@ -268,6 +268,7 @@ Also emit (not in the §13 minimum list):
 ```text
 event ReaperSet(address indexed reaper);
 event StrategyMigrationCancelled(address indexed oldStrategy, address indexed newStrategy);
+event StrategyDepositFailed(address indexed strategy, uint256 ethAmount, bytes reason);
 ```
 
 Do not emit `EmergencyPause` / `EmergencyUnpause` from Grave ([`NDR-0005`](../ndr/0005-strategy-security.md)).
@@ -404,7 +405,7 @@ Grave and Reaper have no `pause` / `unpause`. Spec §6.5 MAY is unused here ([`N
 
 | Operation | Always allowed (subject to its own checks) |
 |---|---|
-| `bury()` | yes; `depositETH` try/catch — idle on revert |
+| `bury()` | yes; `depositETH` try/catch — idle on revert; `StrategyDepositFailed` |
 | NETH `transfer` / `approve` / `burn` | yes |
 | `harvest()` | yes, when harvestable ETH is realizable |
 | `executeStrategyMigration()` | yes, after 14 days when an adapter is active, or immediately when none is; `onlyOwner` |
@@ -481,7 +482,7 @@ Suggested Grave internals (reshape as needed):
 ```text
 _idleETH() → uint256
 _strategyAssets() → uint256
-_deployIdle()                         // deposit address(this).balance when adapter set; catch revert
+_deployIdle()                         // deposit address(this).balance when adapter set; catch revert → StrategyDepositFailed
 _realizeHarvest() → uint256           // §7.1; one path for harvest()
 _collectFromAdapter(uint256 amount) → uint256 received
 ```
@@ -520,7 +521,7 @@ NAV and harvest:
 Deposit on bury:
 
 - with adapter set, `bury` leaves Grave idle ~0 and adapter `totalAssetsInETH` increased; `StrategyDeposit` emitted
-- reverting adapter: `bury` still mints and raises principal; ETH stays idle on Grave
+- reverting adapter: `bury` still mints and raises principal; ETH stays idle on Grave; `StrategyDepositFailed` emitted with revert data
 
 Scheduling / migration:
 

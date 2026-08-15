@@ -43,6 +43,7 @@ contract Grave is ReentrancyGuard, Ownable2Step {
     event Buried(address indexed user, uint256 ethAmount, uint256 nethMinted, uint256 endingEra);
     event EraCompleted(uint256 indexed era, uint256 ethBuried, uint256 nethMinted);
     event StrategyDeposit(address indexed strategy, uint256 ethAmount);
+    event StrategyDepositFailed(address indexed strategy, uint256 ethAmount, bytes reason);
     event YieldHarvested(uint256 ethAmount, uint256 reaperBalance);
     event StrategyMigrationScheduled(address indexed oldStrategy, address indexed newStrategy, uint256 executeAfter);
     event StrategyMigrated(
@@ -252,7 +253,9 @@ contract Grave is ReentrancyGuard, Ownable2Step {
         }
         try IStrategyAdapter(strategy).depositETH{value: idle}() {
             emit StrategyDeposit(strategy, idle);
-        } catch {}
+        } catch (bytes memory reason) {
+            emit StrategyDepositFailed(strategy, idle, reason);
+        }
     }
 
     function _realizeHarvest(uint256 reportedHarvestable) internal returns (uint256 ethHarvested) {

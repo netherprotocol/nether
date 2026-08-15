@@ -13,12 +13,14 @@ import {TestInvestAdapter} from "test/mocks/TestInvestAdapter.sol";
 contract RevertingDepositAdapter is IStrategyAdapter {
     address public immutable grave;
 
+    error DepositRejected();
+
     constructor(address grave_) {
         grave = grave_;
     }
 
     function depositETH() external payable {
-        revert("deposit");
+        revert DepositRejected();
     }
 
     function withdrawETH(uint256, address) external view returns (uint256) {
@@ -236,6 +238,7 @@ contract StrategyTest is Test {
 
     event ReaperSet(address indexed reaper);
     event StrategyDeposit(address indexed strategy, uint256 ethAmount);
+    event StrategyDepositFailed(address indexed strategy, uint256 ethAmount, bytes reason);
     event YieldHarvested(uint256 ethAmount, uint256 reaperBalance);
     event StrategyMigrationScheduled(address indexed oldStrategy, address indexed newStrategy, uint256 executeAfter);
     event StrategyMigrated(
@@ -577,6 +580,10 @@ contract StrategyTest is Test {
     function test_revertingDepositDoesNotRevertBury() public {
         RevertingDepositAdapter bad = new RevertingDepositAdapter(address(grave));
         _activate(address(bad));
+        vm.expectEmit(true, false, false, true, address(grave));
+        emit StrategyDepositFailed(
+            address(bad), 1 ether, abi.encodeWithSelector(RevertingDepositAdapter.DepositRejected.selector)
+        );
         uint256 nethOut = _bury(alice, 1 ether);
         assertEq(nethOut, 1_000_000 ether);
         assertEq(grave.protectedPrincipal(), 1 ether);
