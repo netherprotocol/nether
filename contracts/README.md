@@ -27,4 +27,6 @@ Switch RPC with `--rpc-url` (HTTPS URL or Foundry alias `base` / `base_sepolia`)
 
 `executeStrategyMigration` can only succeed after Grave’s immutable 14-day delay. Re-run the same command after that timestamp (Sepolia may iterate with `--redeploy`). Mainnet broadcasts require `--confirm-mainnet` and abort if the remaining setup is estimated above USD 15 (`ETH_USD_PRICE`, spec §18).
 
+The wrapper looks for `forge` / `cast` on `PATH` and in `~/.foundry/bin` (Foundry’s default install on macOS, which a bash script does not inherit from zsh). Override the location with `FOUNDRY_BIN` if needed.
+
 See `./script/deploy.sh --help`.
