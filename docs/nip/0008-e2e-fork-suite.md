@@ -1,6 +1,6 @@
 # NIP-0008: End-to-end Base fork suite
 
-- Status: Draft (do not implement until this NIP is explicitly started)
+- Status: Implemented
 - Date: 2026-08-15
 - Workstream: M0 fork gate (after W5)
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)

@@ -34,4 +34,4 @@ docs/nip/
 | [0005](0005-reaper.md) | Reaper — reverse Dutch auction | Implemented |
 | [0006](0006-strategy.md) | Strategy interface, harvest, and strategy governance | Implemented |
 | [0007](0007-aave-adapter.md) | Aave V3 WETH adapter | Implemented |
-| [0008](0008-e2e-fork-suite.md) | End-to-end Base fork suite | Draft |
+| [0008](0008-e2e-fork-suite.md) | End-to-end Base fork suite | Implemented |
