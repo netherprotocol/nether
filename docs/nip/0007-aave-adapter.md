@@ -210,7 +210,7 @@ pool.setUserUseReserveAsCollateral(weth, false)
 
 Checks-effects-interactions: no adapter storage writes after the first external call (immutables only). `ReentrancyGuard` covers WETH/Aave callbacks.
 
-If `supply` reverts (pause, supply cap, frozen reserve), the whole call reverts and the wrap undoes. Grave already try/catches `depositETH` and leaves ETH idle ([`NIP-0006`](0006-strategy.md) §6.2).
+If `supply` reverts (pause, supply cap, frozen reserve), the whole call reverts and the wrap undoes. Grave already try/catches `depositETH`, emits `StrategyDepositFailed`, and leaves ETH idle ([`NIP-0006`](0006-strategy.md) §6.2).
 
 Do not keep leftover WETH: `supply` the full wrapped amount.
 
