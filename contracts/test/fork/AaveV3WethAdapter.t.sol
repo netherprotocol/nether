@@ -119,10 +119,13 @@ contract AaveV3WethAdapterForkTest is Test {
         uint256 principal = grave.protectedPrincipal();
         vm.warp(block.timestamp + 7 days);
         _pokeReserve();
-        assertGe(adapter.totalAssetsInETH(), deposited);
-        if (grave.harvestableYield() > 0) {
+        uint256 assetsAfter = adapter.totalAssetsInETH();
+        assertGe(assetsAfter, deposited);
+        uint256 surplus = grave.harvestableYield();
+        if (surplus > 0) {
             uint256 harvested = grave.harvest();
             assertGt(harvested, 0);
+            assertLe(harvested, surplus);
             assertEq(address(reaper).balance, harvested);
             assertGe(grave.currentNAV(), grave.protectedPrincipal());
             assertEq(grave.protectedPrincipal(), principal);
