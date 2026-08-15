@@ -1,7 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import FeatureIcon from '../components/FeatureIcons.astro';
-import LockedCta from '../components/LockedCta.astro';
+import GraveCta from '../components/GraveCta.astro';
+import { HolderStats } from '../components/HolderStats.tsx';
 import RiskWarning from '../components/RiskWarning.astro';
 import {
   FEATURES,
@@ -10,7 +11,6 @@ import {
   SECONDARY_CTA,
   SITE_DESCRIPTION,
   SITE_TITLE,
-  STATS,
   withBase,
 } from '../lib/site';
 
@@ -36,7 +36,7 @@ const heroSrc = withBase('hero.png');
           {HOLDER_COPY}
         </p>
         <div class="mt-6 flex flex-wrap items-center gap-3">
-          <LockedCta placement="hero" />
+          <GraveCta />
           <a
             href={docsHref}
             class="border border-white/85 px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase"
@@ -74,21 +74,6 @@ const heroSrc = withBase('hero.png');
       }
     </section>
 
-    <section
-      class="mt-auto flex shrink-0 flex-col border-t border-white/10 bg-[#0b0b0b] md:flex-row md:items-stretch"
-      aria-label="Protocol facts"
-    >
-      {
-        STATS.map((stat) => (
-          <div class="flex-1 border-b border-white/10 px-5 py-3 md:border-r md:border-b-0 md:last:border-r-0 md:px-8 md:py-3.5">
-            <p class="text-[0.62rem] tracking-[0.22em] text-accent uppercase">{stat.label}</p>
-            <p class="mt-1 text-sm font-light text-white md:text-[0.95rem]">{stat.value}</p>
-            {stat.detail ? (
-              <p class="mt-0.5 text-[0.75rem] font-light text-paper/65">{stat.detail}</p>
-            ) : null}
-          </div>
-        ))
-      }
-    </section>
+    <HolderStats client:load />
   </main>
 </Layout>

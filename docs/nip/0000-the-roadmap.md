@@ -13,6 +13,7 @@
 - E2E fork suite: [`0008-e2e-fork-suite.md`](0008-e2e-fork-suite.md)
 - Gravekeeper: [`0009-grave-keeper.md`](0009-grave-keeper.md)
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
+- Grave dashboard: [`0010-grave-dashboard.md`](0010-grave-dashboard.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
 
@@ -162,7 +163,7 @@ Two surfaces in one workstream, one frontend environment under `apps/web/`:
 - **Landing:** what Nether is, irreversible burial, no redemption, no promised peg
 - **App:** bury, quote, era state, Grave NAV, Reaper auction, warnings
 
-Frontend stack is [`NDR-0003`](../ndr/0003-frontend-stack.md) (Astro static HTML, GitHub Pages, Tailwind). First public slice is [`NIP-0002`](0002-landing-docs.md): holder + Documentation from `docs/**`. Bury/Reaper/dashboard screens are a later W7 NIP on the same tree.
+Frontend stack is [`NDR-0003`](../ndr/0003-frontend-stack.md) (Astro static HTML, GitHub Pages, Tailwind). First public slice is [`NIP-0002`](0002-landing-docs.md): holder + Documentation from `docs/**`. Monitoring dashboard is [`NIP-0010`](0010-grave-dashboard.md). Wallet / bury / sell remain a later W7 NIP on the same tree.
 
 Indexer technology is still TBD at W8. Live dashboard numbers are expected to read spec §12 views via `viem` islands, not an indexer.
 
@@ -226,7 +227,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | Reckoning | The era-change event: `EraCompleted` when an era fills (including mid-`bury()` boundary crossings). Not NAV, harvest, or Reaper settlement. See [`NIP-0004`](0004-grave.md). |
 | Initial strategy | Aave V3 Base, supply-only WETH. [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). |
 | Reaper minimum budget | None. Leftover pre-1.0 wording in the spec was cleaned to match §21. See [`NIP-0005`](0005-reaper.md). |
-| Frontend stack | [`NDR-0003`](../ndr/0003-frontend-stack.md); first slice [`NIP-0002`](0002-landing-docs.md). Indexer still TBD (W8). |
+| Frontend stack | [`NDR-0003`](../ndr/0003-frontend-stack.md); holder [`NIP-0002`](0002-landing-docs.md); dashboard [`NIP-0010`](0010-grave-dashboard.md). Indexer still TBD (W8). |
 | Keeper language / runtime | Node 22 + TypeScript 5.9.3 + viem console app under `apps/keeper/`. Plan: [`NIP-0009`](0009-grave-keeper.md). No NDR in that slice. |
 | Repo layout | Isolated `contracts/`, `apps/web/`, and `apps/keeper/` trees. See [`NIP-0001`](0001-scaffolding.md). |
 | NETH mint lock | One-time `setGrave`, then immutable; no standing admin. See [`NIP-0003`](0003-neth.md). |
@@ -273,7 +274,7 @@ W0 scaffold
 
 M0 gate: W1–W5 tests, invariants, economic sim, Base fork tests ([`NIP-0008`](0008-e2e-fork-suite.md))
  ├─ W6 Sepolia deploy kit
- ├─ W7 frontend (holder/docs: [`NIP-0002`](0002-landing-docs.md); app screens after W2/W3 views)
+ ├─ W7 frontend (holder/docs: [`NIP-0002`](0002-landing-docs.md); dashboard: [`NIP-0010`](0010-grave-dashboard.md); wallet/bury/sell later)
  └─ W8 keeper ([`NIP-0009`](0009-grave-keeper.md); indexer still TBD)
 
 M1: Sepolia + frontend

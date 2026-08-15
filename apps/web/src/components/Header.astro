@@ -1,18 +1,30 @@
 ---
 import { GITHUB_REPO_URL, withBase } from '../lib/site';
-import LockedCta from './LockedCta.astro';
+import { NetworkSwitch } from './NetworkSwitch.tsx';
 
 const homeHref = withBase();
+const graveHref = withBase('grave');
 const docsHref = withBase('docs');
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const gravePath = graveHref.replace(/\/+$/, '');
+const docsPath = docsHref.replace(/\/+$/, '');
+const onGrave = path === gravePath || path.startsWith(`${gravePath}/`);
+const onDocs = path === docsPath || path.startsWith(`${docsPath}/`);
+
+function tabClass(active: boolean): string {
+  return active
+    ? 'text-[0.65rem] font-normal tracking-[0.28em] text-accent uppercase md:text-[0.7rem]'
+    : 'text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]';
+}
 ---
 
 <header class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-3 md:px-10 md:py-3.5">
   <a href={homeHref} class="font-display text-xl text-white md:text-2xl">Nether</a>
   <nav class="flex items-center gap-6 justify-self-center" aria-label="Primary">
-    <a
-      href={docsHref}
-      class="text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]"
-    >
+    <a href={graveHref} class={tabClass(onGrave)} aria-current={onGrave ? 'page' : undefined}>
+      Grave
+    </a>
+    <a href={docsHref} class={tabClass(onDocs)} aria-current={onDocs ? 'page' : undefined}>
       Docs
     </a>
     <a
@@ -25,6 +37,6 @@ const docsHref = withBase('docs');
     </a>
   </nav>
   <div class="justify-self-end">
-    <LockedCta placement="header" />
+    <NetworkSwitch client:load />
   </div>
 </header>

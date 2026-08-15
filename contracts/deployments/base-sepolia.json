@@ -1,0 +1,41 @@
+{
+  "aave": {
+    "aWeth": "0x73a5bB60b0B0fc35710DDc0ea9c407031E31Bdbb",
+    "pool": "0x8bAB6d1b75f19e9eD9fCe8b9BD338844fF79aE27",
+    "provider": "0xE4C23309117Aa30342BFaae6c95c6478e0A4Ad00",
+    "variableDebtWeth": "0x562abf6562d6A2b165aDa02b5946bc3E7b4dD653",
+    "weth": "0x4200000000000000000000000000000000000006"
+  },
+  "chainId": 84532,
+  "contracts": {
+    "adapter": "0xc47606cF64Bf2B1Ab555CeE30e123Ba1a26eB0b5",
+    "grave": "0x21B7B051C85dc071CdA072Ec71D7c1b85cDc4De6",
+    "neth": "0x8AC12cf1806391572D8Cb39B278F49dE317B9F73",
+    "reaper": "0xEF26e160d6d93496dfdAD54b562C3C02dBD722c5"
+  },
+  "createdAt": 1786824966,
+  "deployer": "0xB96996F7E61099FCEF71C10D7D801ac8b9584fB6",
+  "graveOwner": "0xB96996F7E61099FCEF71C10D7D801ac8b9584fB6",
+  "graveSetter": "0xB96996F7E61099FCEF71C10D7D801ac8b9584fB6",
+  "network": "base-sepolia",
+  "ownershipRecipient": "0x0000000000000000000000000000000000000000",
+  "schemaVersion": 1,
+  "status": "complete",
+  "steps": {
+    "acceptOwnership": false,
+    "adapter": true,
+    "executeStrategy": true,
+    "grave": true,
+    "neth": true,
+    "postChecks": true,
+    "reaper": true,
+    "scheduleStrategy": true,
+    "setGrave": true,
+    "setReaper": true,
+    "transferOwnership": false
+  },
+  "strategy": {
+    "executeAfter": 1788034566
+  },
+  "updatedAt": 1786824966
+}

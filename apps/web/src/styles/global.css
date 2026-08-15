@@ -41,18 +41,24 @@ body {
   }
 }
 
-.locked-cta {
+.dash-tip {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
 }
 
-.locked-cta-tip {
+.dash-tip-block {
+  display: flex;
+  width: 100%;
+}
+
+.dash-tip-box {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 0.55rem);
+  bottom: calc(100% + 0.45rem);
   z-index: 30;
   width: max-content;
-  max-width: 16.5rem;
+  max-width: 18rem;
   transform: translateX(-50%);
   padding: 0.55rem 0.7rem;
   border: 1px solid rgb(244 239 230 / 0.14);
@@ -68,13 +74,8 @@ body {
   transition: opacity 0.15s ease;
 }
 
-.locked-cta-below .locked-cta-tip {
-  bottom: auto;
-  top: calc(100% + 0.55rem);
-}
-
-.locked-cta:hover .locked-cta-tip,
-.locked-cta:focus-within .locked-cta-tip {
+.dash-tip:hover .dash-tip-box,
+.dash-tip:focus-within .dash-tip-box {
   opacity: 1;
 }
 

@@ -1,4 +1,5 @@
 import { defineConfig, fontProviders } from 'astro/config';
+import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import { unified } from '@astrojs/markdown-remark';
@@ -26,7 +27,7 @@ export default defineConfig({
   base: '/nether/',
   output: 'static',
   trailingSlash: 'never',
-  integrations: [sitemap()],
+  integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
     server: {
