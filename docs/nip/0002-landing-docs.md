@@ -54,7 +54,7 @@ Nav for this slice (center links, all-caps sans, matching the reference chrome):
 - **Nether** (left, serif brand) → `/`
 - **DOCUMENTATION** (center) → `/docs`
 
-Do **not** ship GRAVE, KEEPERS, CONNECT, or a network dropdown in this slice. Those belong to later W7/W8 NIPs. Keep header slots in the layout so they can return without a redesign.
+Do **not** ship GRAVE, KEEPERS, CONNECT, or a network dropdown in this slice. Those belong to later W7/W8 NIPs ([`NIP-0010`](0010-grave-dashboard.md) for the dashboard and network switch). Keep header slots in the layout so they can return without a redesign.
 
 Route mapping (kebab-case, drop `.md`, `README.md` → folder index):
 
@@ -245,7 +245,7 @@ Leave these to later NDRs / NIPs:
 
 - Indexer (W8)
 - Gravekeeper ([`NIP-0009`](0009-grave-keeper.md))
-- Bury / Reaper / Grave dashboard application screens (later W7 NIP)
+- Bury / Reaper / Grave dashboard application screens ([`NIP-0010`](0010-grave-dashboard.md) is the monitoring slice; wallet bury/sell still later)
 - Wallet kit and RPC provider
 - Custom domain
 - On-canvas copy changes after this slice, provided they stay inside spec §1 and §14
