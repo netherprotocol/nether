@@ -15,3 +15,6 @@ contracts/artifacts/
 .env
 .env.*
 !.env.example
+
+# Keeper operator artifacts
+**/keeper-gas.jsonl
