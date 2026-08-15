@@ -3,6 +3,7 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/
 contracts/artifacts/
+contracts/deployments/*.json
 
 # App environments
 **/node_modules/
