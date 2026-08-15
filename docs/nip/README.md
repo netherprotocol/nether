@@ -35,4 +35,4 @@ docs/nip/
 | [0006](0006-strategy.md) | Strategy interface, harvest, and strategy governance | Implemented |
 | [0007](0007-aave-adapter.md) | Aave V3 WETH adapter | Implemented |
 | [0008](0008-e2e-fork-suite.md) | End-to-end Base fork suite | Implemented |
-| [0009](0009-grave-keeper.md) | Grave Keeper (cranker) | Proposed |
+| [0009](0009-grave-keeper.md) | Grave Keeper (cranker) | Implemented |

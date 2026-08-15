@@ -1,6 +1,6 @@
 # NIP-0009: Grave Keeper (cranker)
 
-- Status: Proposed
+- Status: Implemented
 - Date: 2026-08-15
 - Workstream: W8 (keeper slice; full §19 indexer still later)
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
