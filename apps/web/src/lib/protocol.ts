@@ -49,14 +49,15 @@ const ZERO: Address = '0x0000000000000000000000000000000000000000';
 
 export function createPoolClient(network: NetworkConfig, pool: StickyRpcPool) {
   const chain = network.chainId === 8453 ? base : baseSepolia;
+  const provider = {
+    request: ({ method, params }: { method: string; params?: readonly unknown[] }) => {
+      const args = Array.isArray(params) ? [...params] : [];
+      return pool.request(method, args);
+    },
+  };
   return createPublicClient({
     chain,
-    transport: custom(
-      {
-        request: ({ method, params }) => pool.request(method, (params as unknown[]) ?? []),
-      },
-      { retryCount: 0 },
-    ),
+    transport: custom(provider, { retryCount: 0 }),
   });
 }
 

@@ -48,15 +48,69 @@ export function memoryStore(initial: Record<string, string> = {}): StickyStore {
 }
 
 export function sessionStickyStore(): StickyStore {
-  if (typeof sessionStorage === 'undefined') {
+  try {
+    if (typeof sessionStorage === 'undefined') {
+      return memoryStore();
+    }
+    const probe = sessionStorage.getItem('nether.rpc.sticky.probe');
+    void probe;
+    return {
+      get: (key) => sessionStorage.getItem(key),
+      set: (key, value) => {
+        sessionStorage.setItem(key, value);
+      },
+    };
+  } catch {
     return memoryStore();
   }
-  return {
-    get: (key) => sessionStorage.getItem(key),
-    set: (key, value) => {
-      sessionStorage.setItem(key, value);
-    },
-  };
+}
+
+export function isRpcUnavailable(error: unknown): boolean {
+  let current: unknown = error;
+  const seen = new Set<unknown>();
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current);
+    if (current instanceof RpcUnavailableError) {
+      return true;
+    }
+    if ('name' in current && (current as { name?: string }).name === 'RpcUnavailableError') {
+      return true;
+    }
+    const walker = (current as { walk?: (fn: (value: unknown) => boolean) => unknown }).walk;
+    if (typeof walker === 'function') {
+      try {
+        const found = walker.call(current, (value) => isRpcUnavailableLeaf(value));
+        if (found) {
+          return true;
+        }
+      } catch {
+        // ignore walk implementations that throw
+      }
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+function isRpcUnavailableLeaf(error: unknown): boolean {
+  return error instanceof RpcUnavailableError || (error as { name?: string } | undefined)?.name === 'RpcUnavailableError';
+}
+
+export function rootErrorMessage(error: unknown, fallback: string): string {
+  let current: unknown = error;
+  const seen = new Set<unknown>();
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current);
+    const cause = (current as { cause?: unknown }).cause;
+    if (!cause) {
+      break;
+    }
+    current = cause;
+  }
+  if (current instanceof Error && current.message.trim()) {
+    return current.message;
+  }
+  return fallback;
 }
 
 type JsonRpcError = { code?: number; message?: string; data?: unknown };
@@ -215,7 +269,10 @@ export class StickyRpcPool {
       response = await this.fetchImpl(url, {
         method: 'POST',
         headers: { accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: this.nextId++, method, params }),
+        body: JSON.stringify(
+          { jsonrpc: '2.0', id: this.nextId++, method, params },
+          (_key, value) => (typeof value === 'bigint' ? `0x${value.toString(16)}` : value),
+        ),
         signal: controller.signal,
       });
     } catch (error) {

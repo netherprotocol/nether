@@ -9,7 +9,6 @@ import {
 } from '../../lib/networks.ts';
 import { parseAmount } from '../../lib/format.ts';
 import {
-  ContractReadError,
   createPoolClient,
   quoteBuryAmount,
   quoteReaperAmount,
@@ -19,8 +18,9 @@ import {
 } from '../../lib/protocol.ts';
 import {
   RPC_STICKY_PREFIX,
-  RpcUnavailableError,
   StickyRpcPool,
+  isRpcUnavailable,
+  rootErrorMessage,
   sessionStickyStore,
 } from '../../lib/rpcPool.ts';
 import { GravePanel } from './GravePanel.tsx';
@@ -62,14 +62,14 @@ export function DashboardApp() {
       network.name,
       sessionStickyStore(),
       `${RPC_STICKY_PREFIX}${network.id}`,
-      fetch,
+      globalThis.fetch.bind(globalThis),
     );
     poolRef.current = pool;
     clientRef.current = createPoolClient(network, pool);
 
     let cancelled = false;
-    const load = async () => {
-      if (document.hidden) {
+    const load = async (force = false) => {
+      if (!force && document.hidden) {
         return;
       }
       try {
@@ -84,23 +84,26 @@ export function DashboardApp() {
         if (cancelled) {
           return;
         }
-        if (error instanceof RpcUnavailableError) {
+        console.error('Nether dashboard read failed', error);
+        if (isRpcUnavailable(error)) {
           setPhase('rpc-down');
           setSnapshot(null);
           return;
         }
         setPhase('read-error');
-        setReadError(error instanceof ContractReadError ? error.message : 'The selected network’s contracts could not be read.');
+        setReadError(
+          rootErrorMessage(error, 'The selected network’s contracts could not be read.'),
+        );
       }
     };
 
-    void load();
+    void load(true);
     const timer = window.setInterval(() => {
-      void load();
+      void load(false);
     }, POLL_MS);
     const onVisibility = () => {
       if (!document.hidden) {
-        void load();
+        void load(true);
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -134,7 +137,7 @@ export function DashboardApp() {
         if (cancelled) {
           return;
         }
-        if (error instanceof RpcUnavailableError) {
+        if (isRpcUnavailable(error)) {
           setPhase('rpc-down');
         }
       });
@@ -169,7 +172,7 @@ export function DashboardApp() {
         if (cancelled) {
           return;
         }
-        if (error instanceof RpcUnavailableError) {
+        if (isRpcUnavailable(error)) {
           setPhase('rpc-down');
         }
       });
@@ -205,8 +208,15 @@ export function DashboardApp() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-5 py-6 md:px-10 md:py-8">
       {phase === 'read-error' ? (
-        <p className="rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-paper" role="alert">
-          {readError ?? 'The selected network’s contracts could not be read.'}
+        <p className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-paper" role="alert">
+          <span>{readError ?? 'The selected network’s contracts could not be read.'}</span>
+          <button
+            type="button"
+            className="bg-accent px-3 py-1.5 text-[0.65rem] tracking-[0.18em] text-white uppercase"
+            onClick={retry}
+          >
+            Retry
+          </button>
         </p>
       ) : null}
       <TopStats snapshot={snapshot} />

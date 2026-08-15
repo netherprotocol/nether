@@ -4,7 +4,9 @@ import {
   ExecutionRevertedError,
   RpcUnavailableError,
   StickyRpcPool,
+  isRpcUnavailable,
   memoryStore,
+  rootErrorMessage,
   type FetchLike,
 } from './rpcPool.ts';
 
@@ -168,5 +170,16 @@ describe('StickyRpcPool', () => {
     assert.equal(rpc.stickyIndex, 0);
     const result = await rpc.request('eth_blockNumber');
     assert.equal(result, '0xaa');
+  });
+});
+
+describe('isRpcUnavailable', () => {
+  it('finds RpcUnavailableError under a wrapped cause', () => {
+    const inner = new RpcUnavailableError('Base Sepolia');
+    const wrapped = new Error('Unknown RPC error', { cause: inner });
+    assert.equal(isRpcUnavailable(inner), true);
+    assert.equal(isRpcUnavailable(wrapped), true);
+    assert.equal(isRpcUnavailable(new Error('nope')), false);
+    assert.equal(rootErrorMessage(wrapped, 'fallback'), inner.message);
   });
 });
