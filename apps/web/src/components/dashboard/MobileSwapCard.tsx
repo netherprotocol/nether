@@ -1,4 +1,4 @@
-import { ChevronDown, Landmark, Skull } from 'lucide-react';
+import { ChevronDown, Landmark } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { GraveStats } from './GraveStats.tsx';
 import type { DeploymentContracts } from '../../lib/deployments.ts';
@@ -25,15 +25,9 @@ export function MobileSwapCard({
   return (
     <section className="rounded-xl border border-white/10 bg-[#0c0c0c] p-4 md:hidden">
       <header className="mb-4 flex items-start gap-3">
-        {buryTab ? (
-          <Landmark className="mt-0.5 h-6 w-6 text-accent" strokeWidth={1.25} aria-hidden="true" />
-        ) : (
-          <Skull className="mt-0.5 h-6 w-6 text-accent" strokeWidth={1.25} aria-hidden="true" />
-        )}
+        <Landmark className="mt-0.5 h-6 w-6 text-accent" strokeWidth={1.25} aria-hidden="true" />
         <div>
-          <h2 className="text-[0.78rem] tracking-[0.22em] text-accent uppercase">
-            {buryTab ? 'Grave' : 'Reaper'}
-          </h2>
+          <h2 className="text-[0.78rem] tracking-[0.22em] text-accent uppercase">Grave</h2>
           <p className="mt-1 text-sm text-muted">
             {buryTab ? 'Bury ETH to earn $NETH' : 'Sell $NETH for ETH via reverse Dutch auction'}
           </p>
