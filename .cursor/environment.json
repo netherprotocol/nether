@@ -1,0 +1,17 @@
+{
+  "name": "Nether",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "cd apps/web && npm run dev -- --host 127.0.0.1 --port 4321"
+    }
+  ],
+  "ports": [
+    {
+      "name": "web",
+      "port": 4321
+    }
+  ]
+}
