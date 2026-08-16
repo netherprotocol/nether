@@ -1,6 +1,6 @@
 ---
 import { GITHUB_REPO_URL, withBase } from '../lib/site';
-import { NetworkSwitch } from './NetworkSwitch.tsx';
+import { HeaderActions } from './HeaderActions.tsx';
 
 const homeHref = withBase();
 const graveHref = withBase('grave');
@@ -37,6 +37,6 @@ function tabClass(active: boolean): string {
     </a>
   </nav>
   <div class="justify-self-end">
-    <NetworkSwitch client:load />
+    <HeaderActions client:load />
   </div>
 </header>

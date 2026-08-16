@@ -30,6 +30,9 @@ export default defineConfig({
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
+    define: {
+      global: 'globalThis',
+    },
     server: {
       fs: {
         allow: ['../..'],

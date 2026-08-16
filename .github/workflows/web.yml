@@ -39,6 +39,7 @@ jobs:
         env:
           ASTRO_TELEMETRY_DISABLED: '1'
           PUBLIC_GITHUB_REPO: ${{ github.server_url }}/${{ github.repository }}
+          PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ vars.PUBLIC_WALLETCONNECT_PROJECT_ID }}
 
   build:
     if: github.event_name != 'pull_request'
@@ -52,6 +53,7 @@ jobs:
         env:
           ASTRO_TELEMETRY_DISABLED: '1'
           PUBLIC_GITHUB_REPO: ${{ github.server_url }}/${{ github.repository }}
+          PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ vars.PUBLIC_WALLETCONNECT_PROJECT_ID }}
 
   deploy:
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'

@@ -86,6 +86,18 @@ export function formatEthPerNeth(rateNethPerEth: bigint): string {
   return `1 NETH → ${formatWei(ethOut, 8)} ETH`;
 }
 
+export function formatAmountInput(wei: bigint): string {
+  const negative = wei < 0n;
+  const abs = negative ? -wei : wei;
+  const whole = abs / WAD;
+  const fraction = abs % WAD;
+  if (fraction === 0n) {
+    return `${negative ? '-' : ''}${whole.toString()}`;
+  }
+  const fractionText = fraction.toString().padStart(18, '0').replace(/0+$/, '');
+  return `${negative ? '-' : ''}${whole.toString()}.${fractionText}`;
+}
+
 export function parseAmount(raw: string): bigint | null {
   const trimmed = raw.trim();
   if (trimmed === '' || trimmed === '.') {

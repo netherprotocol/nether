@@ -1,6 +1,6 @@
 # NIP-0011: Wallet connect, bury, and Reaper actions
 
-- Status: Planned
+- Status: Implemented
 - Date: 2026-08-16
 - Workstream: W7 (app / wallet slice)
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
