@@ -37,3 +37,4 @@ docs/nip/
 | [0008](0008-e2e-fork-suite.md) | End-to-end Base fork suite | Implemented |
 | [0009](0009-grave-keeper.md) | Grave Keeper (cranker) | Implemented |
 | [0010](0010-grave-dashboard.md) | Grave dashboard (monitoring slice) | Implemented |
+| [0011](0011-wallet-connect.md) | Wallet connect, bury, and Reaper actions | Planned |

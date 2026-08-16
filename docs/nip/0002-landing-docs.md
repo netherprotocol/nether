@@ -54,7 +54,7 @@ Nav for this slice (center links, all-caps sans, matching the reference chrome):
 - **Nether** (left, serif brand) → `/`
 - **DOCUMENTATION** (center) → `/docs`
 
-Do **not** ship GRAVE, KEEPERS, CONNECT, or a network dropdown in this slice. Those belong to later W7/W8 NIPs ([`NIP-0010`](0010-grave-dashboard.md) for the dashboard and network switch). Keep header slots in the layout so they can return without a redesign.
+Do **not** ship GRAVE, KEEPERS, CONNECT, or a network dropdown in this slice. Those belong to later W7/W8 NIPs ([`NIP-0010`](0010-grave-dashboard.md) for the dashboard and network switch; [`NIP-0011`](0011-wallet-connect.md) for connect / bury / sell). Keep header slots in the layout so they can return without a redesign.
 
 Route mapping (kebab-case, drop `.md`, `README.md` → folder index):
 

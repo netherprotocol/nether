@@ -10,7 +10,7 @@
 - Visual reference: attached **The SOL Grave** dashboard screenshot, with the Nether-specific exceptions in §4
 - No NDR in this slice
 
-This plan is the second public frontend slice: a live Grave / Reaper / NETH monitoring page on the existing Astro static site. It reads spec §12 views from Base Sepolia. It does **not** send `bury`, `sellToReaper`, or wallet transactions. Those stay stubs for a later W7 NIP.
+This plan is the second public frontend slice: a live Grave / Reaper / NETH monitoring page on the existing Astro static site. It reads spec §12 views from Base Sepolia. It does **not** send `bury`, `sellToReaper`, or wallet transactions. Those stay stubs until [`NIP-0011`](0011-wallet-connect.md).
 
 
 ## 1. Purpose
@@ -22,7 +22,7 @@ Ship the public dashboard so anyone can observe the Sepolia family without conne
 - a network switch that is ready for Base mainnet but only Sepolia is enabled
 - a sticky public RPC pool with failover and a full-page RPC-down state
 
-Unblock a later wallet / bury / sell NIP on the same route without rewriting the page.
+Unblock [`NIP-0011`](0011-wallet-connect.md) (wallet / bury / sell) on the same route without rewriting the page.
 
 ## 2. Scope
 
@@ -435,7 +435,7 @@ This slice is done when:
 
 Leave these to later NIPs:
 
-- Wallet kit, `bury`, `sellToReaper`, approvals, balances from an account
+- Wallet kit, `bury`, `sellToReaper`, `startAuction`, approvals, balances from an account — [`NIP-0011`](0011-wallet-connect.md)
 - Enabling Base mainnet (addresses + probed RPC pool)
 - Keepers page and spec §19 historical analytics
 - Custom domain
