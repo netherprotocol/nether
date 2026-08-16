@@ -5,11 +5,27 @@ export type NetworkId = 'base' | 'base-sepolia';
 export type NetworkConfig = {
   id: NetworkId;
   name: string;
+  walletChainName: string;
   chainId: number;
   explorer: string;
+  officialRpcUrl: string;
   enabled: boolean;
   rpcUrls: readonly string[];
   disabledReason?: string;
+};
+
+export const NATIVE_CURRENCY = {
+  name: 'Ether',
+  symbol: 'ETH',
+  decimals: 18,
+} as const;
+
+export type AddEthereumChainParams = {
+  chainId: `0x${string}`;
+  chainName: string;
+  nativeCurrency: typeof NATIVE_CURRENCY;
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
 };
 
 export const NETWORK_STORAGE_KEY = 'nether.network';
@@ -19,8 +35,10 @@ export const NETWORKS: Record<NetworkId, NetworkConfig> = {
   base: {
     id: 'base',
     name: 'Base',
+    walletChainName: 'Base Mainnet',
     chainId: 8453,
     explorer: 'https://basescan.org',
+    officialRpcUrl: 'https://mainnet.base.org',
     enabled: false,
     rpcUrls: [],
     disabledReason: 'Mainnet deployment is not live.',
@@ -28,8 +46,10 @@ export const NETWORKS: Record<NetworkId, NetworkConfig> = {
   'base-sepolia': {
     id: 'base-sepolia',
     name: 'Base Sepolia',
+    walletChainName: 'Base Sepolia',
     chainId: 84532,
     explorer: 'https://sepolia.basescan.org',
+    officialRpcUrl: 'https://sepolia.base.org',
     enabled: true,
     rpcUrls: [
       'https://sepolia.base.org',
@@ -62,6 +82,45 @@ export function resolveNetworkId(stored: string | null): NetworkId {
 
 export function explorerAddressUrl(network: NetworkConfig, address: string): string {
   return `${network.explorer}/address/${address}`;
+}
+
+export function explorerTxUrl(network: NetworkConfig, hash: string): string {
+  return `${network.explorer}/tx/${hash}`;
+}
+
+export function hexChainId(chainId: number): `0x${string}` {
+  return `0x${chainId.toString(16)}`;
+}
+
+export function addEthereumChainParams(network: NetworkConfig): AddEthereumChainParams {
+  return {
+    chainId: hexChainId(network.chainId),
+    chainName: network.walletChainName,
+    nativeCurrency: { ...NATIVE_CURRENCY },
+    rpcUrls: [network.officialRpcUrl],
+    blockExplorerUrls: [network.explorer],
+  };
+}
+
+export function manualNetworkGuide(network: NetworkConfig): {
+  chainName: string;
+  chainId: number;
+  chainIdHex: `0x${string}`;
+  officialRpcUrl: string;
+  backupRpcUrls: readonly string[];
+  explorer: string;
+  nativeCurrency: typeof NATIVE_CURRENCY;
+} {
+  const backups = network.rpcUrls.filter((url) => url !== network.officialRpcUrl);
+  return {
+    chainName: network.walletChainName,
+    chainId: network.chainId,
+    chainIdHex: hexChainId(network.chainId),
+    officialRpcUrl: network.officialRpcUrl,
+    backupRpcUrls: backups,
+    explorer: network.explorer,
+    nativeCurrency: NATIVE_CURRENCY,
+  };
 }
 
 export function contractsOn(network: NetworkConfig): DeploymentContracts | undefined {

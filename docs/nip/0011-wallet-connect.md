@@ -1,6 +1,6 @@
 # NIP-0011: Wallet connect, bury, and Reaper actions
 
-- Status: Planned
+- Status: Implemented
 - Date: 2026-08-16
 - Workstream: W7 (app / wallet slice)
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
@@ -19,14 +19,14 @@ This plan is the third public frontend slice: connect a wallet on the existing A
 Turn the Grave dashboard stubs from [`NIP-0010`](0010-grave-dashboard.md) into working actions against Base and Base Sepolia:
 
 - connect a wallet without rewriting the static site
-- show the connected account’s **$NETH** balance (and **ETH** on the bury widget)
+- show the connected account’s **$NETH** balance (required on the account chip and the $NETH bar; also on the sell widget) and **ETH** on the bury widget (optional on the account chip)
 - **bury** ETH
 - **start** a Reaper auction when none is active (permissionless; the keeper is the usual caller, not a privileged one)
 - **sell $NETH** to an active Reaper auction
 
-First-class wallets: **MetaMask**, **Coinbase Wallet**, **Trust Wallet**. Generic path: **EIP-6963** injected discovery plus **WalletConnect v2** for any other WalletConnect-compatible wallet.
+First-class wallets: **MetaMask**, **Coinbase Wallet**, **Trust Wallet**. Generic path: **EIP-6963** injected discovery plus an **Other wallet** row (WalletConnect v2 under the hood) for any other WalletConnect-compatible wallet.
 
-When the selected network is Base Sepolia, offer to **add Base Sepolia** to the wallet. Offer to **add $NETH** (Sepolia or Base, matching the selected network) to the wallet’s token list. Native `wallet_addEthereumChain` / `wallet_watchAsset` for wallets that implement those RPCs; a copy-paste guide with public RPC URLs and token fields for the rest.
+When the selected network is Base Sepolia, offer to **add Base Sepolia** to the wallet. Offer to **add $NETH** (Sepolia or Base, matching the selected network) to the wallet’s token list. Those add controls live in the **account dropdown only**. Hide them once the wallet is already on the site chain, or once the user has already pressed the corresponding button on this origin (`localStorage`; wallets do not expose a reliable “token already watched” check). Native `wallet_addEthereumChain` / `wallet_watchAsset` for wallets that implement those RPCs; a copy-paste guide with public RPC URLs and token fields for the rest.
 
 
 ## 2. Scope
@@ -35,11 +35,11 @@ In scope:
 
 - `wagmi` v2 on the existing `/grave` React island (and a small header connect island), using the already-pinned `viem` `2.55.15`
 - Connect / disconnect UI in the header **right** cluster (not the center nav)
-- Featured connectors for MetaMask, Coinbase Wallet, Trust Wallet, plus a generic WalletConnect / other-injected list
+- Featured connectors for MetaMask, Coinbase Wallet, Trust Wallet (official brand marks), plus other EIP-6963 wallets and an **Other wallet** row (WalletConnect when a project ID is set)
 - Site networks remain Base (product default, still disabled until `contracts/deployments/base.json` exists) and Base Sepolia (live). Wallet config includes **both** chains now
-- Wrong-network banner: switch the wallet to the site-selected chain; on `4902`, add the chain
-- Explicit **Add Base Sepolia** (when Sepolia is selected) and **Add $NETH** controls, with a manual guide fallback
-- Live ETH balance on bury, live NETH balance on sell; optional ETH on the account chip
+- Wrong-network banner: switch the wallet to the site-selected chain; on `4902`, add the chain. No separate Add-network button on the banner
+- **Add Base Sepolia** / **Add Base** and **Add $NETH** only in the account menu, hidden when already added (on-chain match for the network; `localStorage` after the user presses the control for $NETH)
+- Live ETH balance on bury, live NETH balance on sell, the $NETH bar, and the account chip (required); optional ETH on the account chip
 - Send `Grave.bury(minNethOut)` with `value`, `NETH.approve` + `Reaper.sellToReaper(nethIn, minEthOut)`, `Reaper.startAuction()`, and `Reaper.finalizeAuction()` when an auction has expired (required before a new start)
 - Spec §14 burial warning still visible before confirm; client-side slippage → `minNethOut` / `minEthOut`
 - Simulate before send; surface revert / reject / pending / confirmed; refresh the existing snapshot after a receipt
@@ -76,7 +76,7 @@ wagmi v2’s default `injected()` connector already does EIP-6963 (`multiInjecte
 
 #### Option A: wagmi v2 + Nether-styled connect panel (chosen)
 
-`wagmi` + `@tanstack/react-query` (required peer) + connectors `injected`, `metaMask`, `coinbaseWallet`, `walletConnect`. A small connect panel copied to the existing Grave chrome (dark field, mahogany accent, Inter / Cormorant). Featured row: MetaMask, Coinbase Wallet, Trust Wallet. Below: every EIP-6963 announcement, then **WalletConnect** for wallets that are not injected.
+`wagmi` + `@tanstack/react-query` (required peer) + connectors `injected`, `metaMask`, `coinbaseWallet`, `walletConnect`. A small connect panel copied to the existing Grave chrome (dark field, mahogany accent, Inter / Cormorant). Featured row: MetaMask, Coinbase Wallet, Trust Wallet, using each wallet’s official mark. Below: every EIP-6963 announcement, then **Other wallet** for wallets that are not injected (WalletConnect QR).
 
 Writes go through the wallet; public reads stay on the [`NIP-0010`](0010-grave-dashboard.md) RPC pool. Static Astro output is unchanged.
 
@@ -123,7 +123,7 @@ Working set (not an NDR freeze; pin exact 2.x versions at implementation time ag
 WalletConnect v2 requires a **project ID** from [Reown Cloud](https://cloud.reown.com). It is embedded in the public bundle (not a secret). Implementation:
 
 - Read `import.meta.env.PUBLIC_WALLETCONNECT_PROJECT_ID`
-- If unset: hide the WalletConnect row, keep injected / featured extension connectors, show a short note that mobile WalletConnect is unconfigured
+- If unset: hide the Other wallet row, keep injected / featured extension connectors; do not show a vendor-specific “WalletConnect is unconfigured” note
 - GitHub Pages build: pass the value into `.github/workflows/web.yml` from a repository **variable** (not a secret-that-looks-private)
 - In Reown Cloud, allow origin `https://rastsislaux.github.io` (and localhost for `astro dev`)
 - Metadata: name `Nether`, url the Pages origin + `base: '/nether/'`, icons `[nethMarkUrl()]` (`public/neth.svg`)
@@ -146,11 +146,11 @@ Connect panel, two groups:
 **Other wallets**
 
 - Every other EIP-6963 announcement, using the wallet’s own name and icon from the announcement (do not redraw brand marks; Lucide `Wallet` only when metadata has no icon)
-- **WalletConnect**: opens the WC QR / explorer. This is the generic solution for Rainbow, imToken, Safe mobile, and anything else in the WC registry
+- **Other wallet**: opens the WalletConnect QR / explorer. This is the generic solution for Rainbow, imToken, Safe mobile, and anything else in the WC registry. Do not label the button WalletConnect or any other vendor name.
 
-Do not silently grab `window.ethereum`. Do not ship Phantom-only or a closed three-button modal with no WC row.
+Do not silently grab `window.ethereum`. Do not ship Phantom-only or a closed three-button modal with no catch-all row when a project ID is configured.
 
-Icons: connector / EIP-6963 / WC registry images only. Chrome icons stay Lucide (`Wallet`, `Unplug`, `Copy`, `Plus`, `ExternalLink`).
+Icons: featured MetaMask / Coinbase Wallet / Trust Wallet use the official marks vendored in `apps/web/public/wallets/`. Other EIP-6963 rows may use announcement icons. Chrome icons stay Lucide (`Wallet`, `Unplug`, `Copy`, `Plus`, `ExternalLink`).
 
 
 ## 5. Networks
@@ -187,9 +187,9 @@ After connect, and whenever the site-selected network changes:
 4. User reject (4001): leave disconnected actions disabled; keep the banner.
 5. Method missing (4100) or WalletConnect session without the method: open the **manual network guide** (copy chain name, chain id decimal + hex, official RPC, backup RPCs, explorer, currency).
 
-When the selected network is **Base Sepolia**, the account menu always includes **Add Base Sepolia**. That control is required even if the wallet already has the chain (switch is enough; add is idempotent-or-harmless on MetaMask). When the selected network is Base, the same control is **Add Base**.
+When the selected network is **Base Sepolia**, the account menu includes **Add Base Sepolia** only if the wallet is not already on that chain and the user has not already pressed the add control on this origin. When the selected network is Base, the same control is **Add Base**. Hide it once the wallet is on the site chain.
 
-Wrong-network banner copy (Sepolia): **This wallet is not on Base Sepolia.** Buttons: **Switch network**, **Add Base Sepolia**, **Show manual steps**.
+Wrong-network banner copy (Sepolia): **This wallet is not on Base Sepolia.** Buttons: **Switch network**, **Show manual steps**. Switch still adds the chain on `4902`.
 
 Do not send `bury` / `approve` / `sellToReaper` / `startAuction` while chain ids disagree.
 
@@ -213,9 +213,10 @@ options.image: nethMarkUrl()
 
 Offer it:
 
-- in the **$NETH** bar (always, when an address exists)
-- in the account menu
-- after a **successful bury** (the user just received NETH and will not see it in MetaMask until they watch it)
+- in the account menu only
+- hide after the user presses it on this origin (`localStorage` key `nether.addedNeth.{chainId}.{address}`). Wallets do not expose a reliable “already watched” check.
+
+Do not put Add $NETH on the $NETH bar, the wrong-network banner, or the post-bury panel.
 
 If the call is unsupported, rejected, or Coinbase replies that it auto-tracks balances: fall through to the guide. Never pretend the token was added when the RPC failed.
 
@@ -251,7 +252,7 @@ Center nav stays **GRAVE · DOCS · SOURCE** (no CONNECT tab). Right cluster:
 
 1. existing Base / Base Sepolia switch
 2. **Connect wallet** when disconnected (accent button, Lucide `Wallet`)
-3. when connected: truncated address `0xAbCd…1234`, optional ETH balance, click → account menu (copy address, explorer link, add network, add $NETH, disconnect)
+3. when connected: truncated address `0xAbCd…1234`, **$NETH** balance (required), optional ETH balance, click → account menu (copy address, explorer link, add network / add $NETH when not already added, disconnect)
 
 Astro has one React root per `client:load` island. Use a **module-level** `wagmi` `config` and `QueryClient`, and wrap both the header island and `DashboardApp` in `WagmiProvider` + `QueryClientProvider`. Do not lift the whole site into one React tree.
 
@@ -261,7 +262,8 @@ Astro has one React root per `client:load` island. Use a **module-level** `wagmi
 |---|---|---|---|
 | Bury “You bury” | `Balance: —` | native ETH `balanceOf` / `getBalance` | `Balance: —` + banner |
 | Sell “You sell” | `Balance: —` | `NETH.balanceOf(owner)` | `Balance: —` + banner |
-| Account chip | — | truncated address; ETH optional | truncated address + wrong-network state |
+| $NETH bar | `Your balance: —` | `NETH.balanceOf(owner)` | `Your balance: —` |
+| Account chip | — | truncated address; **$NETH required**; ETH optional | truncated address + wrong-network state |
 
 Clicking the balance label fills the input (MAX), leaving a small ETH remainder on bury so the user can still pay gas (implementation: keep 0.0001 ETH or the estimated gas*price, whichever is larger; if the wallet has less, fill what they have and let simulate fail clearly).
 
@@ -278,8 +280,6 @@ Pre-send panel (required; spec §14 copy must be on screen before the wallet pro
 > Buried ETH is permanent. You cannot withdraw it. In exchange, the protocol mints NETH according to the current era. The Grave deploys its capital to earn yield, and harvestable yield funds the Reaper.
 
 Call `bury(minNethOut)` with `value = amount`. `minNethOut = quoteBury(amount) * (1 - slippage)`, floored. Default slippage **0.5%**; presets 0.1% / 0.5% / 1% plus custom. This is UI only; it does not change contract math.
-
-On confirm: optional **Add $NETH** prompt.
 
 ### 7.4 Sell to Reaper
 
@@ -367,7 +367,8 @@ Cover:
 - Add-chain payload: Base `0x2105`, `https://mainnet.base.org`, `https://basescan.org`
 - Switch/add: matching chain is a no-op; 4902 triggers add; 4100 / missing provider method selects the guide path; 4001 is user-reject
 - `wallet_watchAsset` options: selected-network NETH address, symbol `NETH`, decimals 18, `image` = `nethMarkUrl()`
-- Connector grouping: MetaMask / Coinbase / Trust are featured; unknown EIP-6963 ids fall in Other; WalletConnect hidden when project ID is empty
+- Connector grouping: MetaMask / Coinbase / Trust are featured; unknown EIP-6963 ids fall in Other; Other wallet (WalletConnect) hidden when project ID is empty
+- Add-chain / add-$NETH prefs: hide once the wallet is on the site chain or the user has pressed the control on this origin
 - MAX bury leaves a gas reserve when ETH > reserve; below reserve fills the full balance
 
 CI: existing `apps/web` job. Build remains `output: 'static'`. WalletConnect project ID may be absent in PR CI; tests and injected config must still pass.
@@ -383,7 +384,7 @@ Do not run these until this NIP is explicitly started.
 4. Chain match / add-chain / manual network guide (Sepolia first; Base payload present).
 5. Balances; unlock bury with simulate + `minNethOut`; §14 warning in the confirm step.
 6. Approve + `sellToReaper`; start / finalize auction states in the Reaper pane.
-7. Add $NETH (`wallet_watchAsset` + manual token guide) on the $NETH bar, account menu, and post-bury.
+7. Add $NETH (`wallet_watchAsset` + manual token guide) in the account menu only; hide after press.
 8. Tests; pass `PUBLIC_WALLETCONNECT_PROJECT_ID` through Pages build when the variable exists.
 
 
@@ -392,13 +393,13 @@ Do not run these until this NIP is explicitly started.
 This slice is done when:
 
 - A user can connect MetaMask, Coinbase Wallet, and Trust Wallet (extension and/or WalletConnect mobile) on `/grave` without leaving static GitHub Pages
-- Other EIP-6963 wallets appear without a code change; WalletConnect is the catch-all when a project ID is configured
-- ETH and $NETH balances show for the connected account on the correct chain
+- Other EIP-6963 wallets appear without a code change; **Other wallet** is the catch-all when a project ID is configured
+- ETH and $NETH balances show for the connected account on the correct chain ($NETH on the account chip and $NETH bar; ETH optional on the chip)
 - **BURY ETH** sends `bury(minNethOut)` with the spec warning visible before the wallet prompt
 - **SELL NETH** approves exact NETH then `sellToReaper`; inactive/expired auctions cannot sell
 - When idle Reaper ETH exists, a connected user can **start** an auction; when an auction is expired they can **finalize** first
-- On Base Sepolia, the UI offers **Add Base Sepolia**; wallets that implement EIP-3085 get a native prompt; others get RPC URLs, chain id `84532` / `0x14a34`, explorer, and currency
-- The UI offers **Add $NETH** for the selected network’s token address; native `wallet_watchAsset` (including `image: nethMarkUrl()`) on supported wallets; manual contract / symbol / decimals guide otherwise
+- On Base Sepolia, the account menu offers **Add Base Sepolia** when the chain is not already selected / added on this origin; wallets that implement EIP-3085 get a native prompt; others get RPC URLs, chain id `84532` / `0x14a34`, explorer, and currency
+- The account menu offers **Add $NETH** for the selected network’s token address until the user has pressed it on this origin; native `wallet_watchAsset` (including `image: nethMarkUrl()`) on supported wallets; manual contract / symbol / decimals guide otherwise
 - Wrong-network wallets cannot send protocol txs
 - Disconnect returns bury/sell to the previous stub-like disabled state with `Balance: —`
 - `apps/web` tests and build pass; output remains `static`

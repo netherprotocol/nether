@@ -10,11 +10,19 @@ export function NethBar({
   snapshot,
   network,
   contracts,
+  connected,
+  onChain,
+  nethBalance,
 }: {
   snapshot: ProtocolSnapshot | null;
   network: NetworkConfig;
   contracts: DeploymentContracts | undefined;
+  connected: boolean;
+  onChain: boolean;
+  nethBalance: bigint | null;
 }) {
+  const showBalance = connected && onChain && nethBalance != null;
+
   return (
     <section className="rounded-xl border border-white/10 bg-[#0c0c0c] px-5 py-4 md:px-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
@@ -26,10 +34,14 @@ export function NethBar({
           </div>
         </div>
 
-        <div className="grid flex-1 gap-4 sm:grid-cols-2">
+        <div className="grid flex-1 gap-4 sm:grid-cols-3">
           <div>
             <p className="text-[0.62rem] tracking-[0.18em] text-muted uppercase">Total supply</p>
             <p className="mt-2 text-sm text-white">{snapshot ? formatNeth(snapshot.nethSupply) : '—'}</p>
+          </div>
+          <div>
+            <p className="text-[0.62rem] tracking-[0.18em] text-muted uppercase">Your balance</p>
+            <p className="mt-2 text-sm text-white">{showBalance ? formatNeth(nethBalance) : '—'}</p>
           </div>
           <div>
             <p className="text-[0.62rem] tracking-[0.18em] text-muted uppercase">Contract address</p>

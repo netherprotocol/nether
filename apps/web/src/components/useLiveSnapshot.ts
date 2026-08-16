@@ -37,6 +37,7 @@ export function useLiveSnapshot() {
   const contracts = useMemo(() => contractsOn(network), [network]);
   const poolRef = useRef<StickyRpcPool | null>(null);
   const clientRef = useRef<PoolClient | null>(null);
+  const loadRef = useRef<() => void>(() => {});
 
   useLayoutEffect(() => {
     setNetworkId(readStoredNetworkId());
@@ -104,10 +105,14 @@ export function useLiveSnapshot() {
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
+    loadRef.current = () => {
+      void load(true);
+    };
     return () => {
       cancelled = true;
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisibility);
+      loadRef.current = () => {};
     };
   }, [network, contracts, networkId, retryNonce]);
 
@@ -119,6 +124,10 @@ export function useLiveSnapshot() {
     setRetryNonce((value) => value + 1);
   };
 
+  const refreshSnapshot = () => {
+    loadRef.current();
+  };
+
   return {
     networkId,
     network,
@@ -127,6 +136,7 @@ export function useLiveSnapshot() {
     phase,
     readError,
     retry,
+    refreshSnapshot,
     poolRef,
     clientRef,
   };

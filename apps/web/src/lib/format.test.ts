@@ -9,6 +9,7 @@ import {
   formatNeth,
   formatNethPerEth,
   formatWei,
+  formatAmountInput,
   parseAmount,
   splitBury,
   truncateAddress,
@@ -71,6 +72,14 @@ describe('parseAmount', () => {
     assert.equal(parseAmount('1.5'), WAD + WAD / 2n);
     assert.equal(parseAmount(''), 0n);
     assert.equal(parseAmount('nope'), null);
+  });
+});
+
+describe('formatAmountInput', () => {
+  it('writes a decimal string without grouping commas', () => {
+    assert.equal(formatAmountInput(WAD), '1');
+    assert.equal(formatAmountInput(WAD + WAD / 2n), '1.5');
+    assert.equal(formatAmountInput(0n), '0');
   });
 });
 
