@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import type { NetworkConfig } from '../../lib/networks.ts';
 import { switchOrAddChain } from '../../lib/chainSwitch.ts';
+import { markAddedChain } from '../../lib/walletPrefs.ts';
 import { NetworkGuide } from './NetworkGuide.tsx';
-import { addChainExplicit, eip1193From } from './provider.ts';
+import { eip1193From } from './provider.ts';
 
 export function WrongNetworkBanner({ network }: { network: NetworkConfig }) {
   const { chainId, connector, isConnected } = useAccount();
@@ -17,14 +18,9 @@ export function WrongNetworkBanner({ network }: { network: NetworkConfig }) {
   async function onSwitch() {
     const provider = await eip1193From(connector);
     const result = await switchOrAddChain(provider, network);
-    if (result.kind === 'guide') {
-      setGuide(true);
+    if (result.kind === 'matched' || result.kind === 'switched' || result.kind === 'added') {
+      markAddedChain(network.chainId);
     }
-  }
-
-  async function onAdd() {
-    const provider = await eip1193From(connector);
-    const result = await addChainExplicit(provider, network);
     if (result.kind === 'guide') {
       setGuide(true);
     }
@@ -46,15 +42,6 @@ export function WrongNetworkBanner({ network }: { network: NetworkConfig }) {
             }}
           >
             Switch network
-          </button>
-          <button
-            type="button"
-            className="border border-white/20 px-3 py-1.5 text-[0.65rem] tracking-[0.18em] text-white uppercase"
-            onClick={() => {
-              void onAdd();
-            }}
-          >
-            Add {network.walletChainName}
           </button>
           <button
             type="button"

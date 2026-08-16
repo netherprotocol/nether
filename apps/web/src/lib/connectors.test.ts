@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { featuredKind, groupConnectors, walletConnectProjectId } from './connectors.ts';
+import {
+  featuredKind,
+  groupConnectors,
+  OTHER_WALLET_LABEL,
+  walletConnectProjectId,
+} from './connectors.ts';
 
 describe('connector grouping', () => {
   const connectors = [
@@ -43,5 +48,6 @@ describe('connector grouping', () => {
 
     const shown = groupConnectors(connectors, { walletConnectConfigured: true });
     assert.equal(shown.walletConnect?.id, 'walletConnect');
+    assert.equal(OTHER_WALLET_LABEL, 'Other wallet');
   });
 });

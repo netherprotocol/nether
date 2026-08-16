@@ -112,7 +112,7 @@ export function accentButtonClass(disabled: boolean, extra = ''): string {
 
 export function ConnectorIcon({ src, label }: { src?: string; label: string }) {
   if (src) {
-    return <img src={src} alt="" className="h-8 w-8 object-contain" />;
+    return <img src={src} alt="" className="h-8 w-8 rounded-md object-contain" />;
   }
   return <Wallet className="h-8 w-8 text-muted" strokeWidth={1.25} aria-label={label} />;
 }

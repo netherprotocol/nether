@@ -11,13 +11,11 @@ import { isUserRejected, revertShortMessage } from '../../lib/errors.ts';
 import { useLiveSnapshot } from '../useLiveSnapshot.ts';
 import { WalletProviders } from '../wallet/WalletProviders.tsx';
 import { WrongNetworkBanner } from '../wallet/WrongNetworkBanner.tsx';
-import { addNethToken, eip1193From } from '../wallet/provider.ts';
 import { GravePanel } from './GravePanel.tsx';
 import { NethBar } from './NethBar.tsx';
 import { ReaperPanel } from './ReaperPanel.tsx';
 import { RpcDown } from './RpcDown.tsx';
 import { TopStats } from './TopStats.tsx';
-import { TokenGuide } from '../wallet/TokenGuide.tsx';
 
 export function DashboardApp() {
   return (
@@ -30,7 +28,7 @@ export function DashboardApp() {
 function DashboardBody() {
   const { network, contracts, snapshot, phase, readError, retry, refreshSnapshot, poolRef, clientRef } =
     useLiveSnapshot();
-  const { address, isConnected, chainId, connector } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const onChain = Boolean(isConnected && address && chainId === network.chainId);
   const [buryInput, setBuryInput] = useState('');
@@ -46,7 +44,6 @@ function DashboardBody() {
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [tokenGuide, setTokenGuide] = useState(false);
 
   useEffect(() => {
     const client = clientRef.current;
@@ -256,18 +253,6 @@ function DashboardBody() {
       }),
     );
 
-  async function onAddNeth(): Promise<'watched' | 'guide'> {
-    if (!contracts?.neth) {
-      return 'guide';
-    }
-    const provider = await eip1193From(connector);
-    const result = await addNethToken(provider, contracts.neth);
-    if (result === 'guide') {
-      setTokenGuide(true);
-    }
-    return result;
-  }
-
   if (phase === 'rpc-down' && !snapshot) {
     return (
       <div className="px-5 py-10 md:px-10 md:py-14">
@@ -314,7 +299,6 @@ function DashboardBody() {
         error={lastAction === 'bury' ? txError : null}
         hash={lastAction === 'bury' ? txHash : null}
         onBury={onBury}
-        onAddNeth={onAddNeth}
       />
       <ReaperPanel
         snapshot={snapshot}
@@ -340,13 +324,10 @@ function DashboardBody() {
         snapshot={snapshot}
         network={network}
         contracts={contracts}
-        onAddNeth={() => {
-          void onAddNeth();
-        }}
+        connected={isConnected}
+        onChain={onChain}
+        nethBalance={nethBalance}
       />
-      {tokenGuide && contracts ? (
-        <TokenGuide network={network} address={contracts.neth} onClose={() => setTokenGuide(false)} />
-      ) : null}
     </div>
   );
 }

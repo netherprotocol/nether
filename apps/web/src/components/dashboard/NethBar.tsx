@@ -1,4 +1,4 @@
-import { Globe, Plus } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { NethMark } from '../NethMark.tsx';
 import type { DeploymentContracts } from '../../lib/deployments.ts';
 import { formatNeth } from '../../lib/format.ts';
@@ -10,13 +10,19 @@ export function NethBar({
   snapshot,
   network,
   contracts,
-  onAddNeth,
+  connected,
+  onChain,
+  nethBalance,
 }: {
   snapshot: ProtocolSnapshot | null;
   network: NetworkConfig;
   contracts: DeploymentContracts | undefined;
-  onAddNeth: () => void;
+  connected: boolean;
+  onChain: boolean;
+  nethBalance: bigint | null;
 }) {
+  const showBalance = connected && onChain && nethBalance != null;
+
   return (
     <section className="rounded-xl border border-white/10 bg-[#0c0c0c] px-5 py-4 md:px-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
@@ -28,10 +34,14 @@ export function NethBar({
           </div>
         </div>
 
-        <div className="grid flex-1 gap-4 sm:grid-cols-2">
+        <div className="grid flex-1 gap-4 sm:grid-cols-3">
           <div>
             <p className="text-[0.62rem] tracking-[0.18em] text-muted uppercase">Total supply</p>
             <p className="mt-2 text-sm text-white">{snapshot ? formatNeth(snapshot.nethSupply) : '—'}</p>
+          </div>
+          <div>
+            <p className="text-[0.62rem] tracking-[0.18em] text-muted uppercase">Your balance</p>
+            <p className="mt-2 text-sm text-white">{showBalance ? formatNeth(nethBalance) : '—'}</p>
           </div>
           <div>
             <p className="text-[0.62rem] tracking-[0.18em] text-muted uppercase">Contract address</p>
@@ -40,16 +50,6 @@ export function NethBar({
             </p>
           </div>
         </div>
-        {contracts ? (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 self-start border border-white/15 px-3 py-2 text-[0.65rem] tracking-[0.14em] text-white uppercase hover:border-accent/50 lg:self-center"
-            onClick={onAddNeth}
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
-            Add $NETH
-          </button>
-        ) : null}
       </div>
 
       <dl className="mt-5 grid gap-3 border-t border-white/10 pt-4 text-sm sm:grid-cols-2 lg:grid-cols-5">

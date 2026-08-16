@@ -1,6 +1,7 @@
 import { Wallet } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useAccount, useBalance, useReadContract } from 'wagmi';
+import { nethAbi } from '../../lib/abi.ts';
 import {
   NETWORKS,
   contractsOn,
@@ -11,6 +12,7 @@ import {
 } from '../../lib/networks.ts';
 import { formatWei, truncateAddress } from '../../lib/format.ts';
 import { switchOrAddChain } from '../../lib/chainSwitch.ts';
+import { markAddedChain, markAddedNeth, shouldOfferAddChain, shouldOfferAddNeth } from '../../lib/walletPrefs.ts';
 import { AccountMenu } from './AccountMenu.tsx';
 import { ConnectModal } from './ConnectModal.tsx';
 import { NetworkGuide } from './NetworkGuide.tsx';
@@ -23,6 +25,7 @@ export function ConnectButton() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [networkGuide, setNetworkGuide] = useState(false);
   const [tokenGuide, setTokenGuide] = useState(false);
+  const [prefTick, setPrefTick] = useState(0);
   const { address, isConnected, chainId, connector } = useAccount();
   const network = NETWORKS[networkId];
   const contracts = contractsOn(network);
@@ -33,11 +36,28 @@ export function ConnectButton() {
     chainId: network.chainId,
     query: { enabled: Boolean(address && onChain) },
   });
+  const { data: nethBalance } = useReadContract({
+    address: contracts?.neth,
+    abi: nethAbi,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    chainId: network.chainId,
+    query: {
+      enabled: Boolean(address && onChain && contracts?.neth),
+      refetchInterval: 12_000,
+    },
+  });
 
   useLayoutEffect(() => {
     setNetworkId(readStoredNetworkId());
   }, []);
   useEffect(() => subscribeNetworkChange(setNetworkId), []);
+
+  useEffect(() => {
+    if (onChain) {
+      markAddedChain(network.chainId);
+    }
+  }, [onChain, network.chainId]);
 
   useEffect(() => {
     if (!isConnected || !connector || !address) {
@@ -54,11 +74,17 @@ export function ConnectButton() {
       if (result.kind === 'guide') {
         setNetworkGuide(true);
       }
+      if (result.kind === 'matched' || result.kind === 'switched' || result.kind === 'added') {
+        markAddedChain(network.chainId);
+        setPrefTick((value) => value + 1);
+      }
     })();
   }, [address, chainId, connector, isConnected, network]);
 
   const handleAddNetwork = useCallback(async () => {
     setMenuOpen(false);
+    markAddedChain(network.chainId);
+    setPrefTick((value) => value + 1);
     const provider = await eip1193From(connector);
     const result = await addChainExplicit(provider, network);
     if (result.kind === 'guide') {
@@ -71,12 +97,23 @@ export function ConnectButton() {
     if (!contracts?.neth) {
       return;
     }
+    markAddedNeth(network.chainId, contracts.neth);
+    setPrefTick((value) => value + 1);
     const provider = await eip1193From(connector);
     const result = await addNethToken(provider, contracts.neth);
     if (result === 'guide') {
       setTokenGuide(true);
     }
-  }, [connector, contracts]);
+  }, [connector, contracts, network.chainId]);
+
+  const showAddNetwork = useMemo(
+    () => shouldOfferAddChain(onChain, network.chainId),
+    [onChain, network.chainId, prefTick],
+  );
+  const showAddNeth = useMemo(
+    () => shouldOfferAddNeth(network.chainId, contracts?.neth),
+    [network.chainId, contracts?.neth, prefTick],
+  );
 
   if (!isConnected || !address) {
     return (
@@ -107,6 +144,11 @@ export function ConnectButton() {
         ].join(' ')}
       >
         <span className="font-mono">{truncateAddress(address)}</span>
+        {onChain ? (
+          <span className="text-white">
+            {nethBalance != null ? `${formatWei(nethBalance, 4)} $NETH` : '…'}
+          </span>
+        ) : null}
         {onChain && balance ? (
           <span className="hidden text-muted md:inline">{formatWei(balance.value, 4)} ETH</span>
         ) : null}
@@ -115,7 +157,8 @@ export function ConnectButton() {
         <AccountMenu
           address={address}
           network={network}
-          nethAddress={contracts?.neth}
+          showAddNetwork={showAddNetwork}
+          showAddNeth={showAddNeth}
           onAddNetwork={() => {
             void handleAddNetwork();
           }}

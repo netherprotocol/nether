@@ -38,7 +38,6 @@ export function GravePanel({
   error,
   hash,
   onBury,
-  onAddNeth,
 }: {
   snapshot: ProtocolSnapshot | null;
   network: NetworkConfig;
@@ -54,7 +53,6 @@ export function GravePanel({
   error: string | null;
   hash: string | null;
   onBury: (amount: bigint, minNethOut: bigint) => Promise<'ok' | 'rejected' | 'error' | 'busy'>;
-  onAddNeth: () => Promise<'watched' | 'guide'>;
 }) {
   const remaining = snapshot
     ? eraRemaining(snapshot.currentEraBuried, snapshot.currentEraCapacity)
@@ -73,7 +71,6 @@ export function GravePanel({
   const segments = snapshot && amount > 0n ? splitBury(snapshot.currentEra, snapshot.currentEraBuried, amount) : [];
   const [step, setStep] = useState<'form' | 'confirm'>('form');
   const [slippageBps, setSlippageBps] = useState(DEFAULT_SLIPPAGE_BPS);
-  const [promptAdd, setPromptAdd] = useState(false);
   const spendable = ethBalance != null ? spendableEth(ethBalance, gasReserve) : 0n;
   const minNethOut = buryQuote != null ? minOutFromQuote(buryQuote, slippageBps) : 0n;
   const canBury =
@@ -242,7 +239,6 @@ export function GravePanel({
                     void onBury(amount, minNethOut).then((result) => {
                       if (result === 'ok') {
                         setStep('form');
-                        setPromptAdd(true);
                       }
                     });
                   }}
@@ -270,29 +266,6 @@ export function GravePanel({
           )}
           <ActionFeedback pending={pending === 'bury' ? pending : null} error={error} hash={hash} network={network} />
           {step === 'form' ? <p className="mt-3 text-[0.72rem] leading-relaxed text-muted">{BURY_WARNING}</p> : null}
-          {promptAdd ? (
-            <div className="mt-3 rounded-lg border border-white/10 bg-black/40 p-3 text-sm">
-              <p className="text-paper">NETH was minted to this wallet. Add $NETH to see it in the token list.</p>
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  className={accentButtonClass(false, 'flex-1')}
-                  onClick={() => {
-                    void onAddNeth().then(() => setPromptAdd(false));
-                  }}
-                >
-                  Add $NETH
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 border border-white/20 py-3 text-[0.72rem] tracking-[0.22em] text-white uppercase"
-                  onClick={() => setPromptAdd(false)}
-                >
-                  Skip
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
     </section>

@@ -8,14 +8,16 @@ import type { Address } from 'viem';
 export function AccountMenu({
   address,
   network,
-  nethAddress,
+  showAddNetwork,
+  showAddNeth,
   onAddNetwork,
   onAddNeth,
   onClose,
 }: {
   address: Address;
   network: NetworkConfig;
-  nethAddress: Address | undefined;
+  showAddNetwork: boolean;
+  showAddNeth: boolean;
   onAddNetwork: () => void;
   onAddNeth: () => void;
   onClose: () => void;
@@ -76,16 +78,18 @@ export function AccountMenu({
         <ExternalLink className="h-3.5 w-3.5 text-muted" strokeWidth={1.5} />
         View on explorer
       </a>
-      <button
-        type="button"
-        role="menuitem"
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-paper hover:bg-white/5"
-        onClick={onAddNetwork}
-      >
-        <Plus className="h-3.5 w-3.5 text-muted" strokeWidth={1.5} />
-        Add {network.walletChainName}
-      </button>
-      {nethAddress ? (
+      {showAddNetwork ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-paper hover:bg-white/5"
+          onClick={onAddNetwork}
+        >
+          <Plus className="h-3.5 w-3.5 text-muted" strokeWidth={1.5} />
+          Add {network.walletChainName}
+        </button>
+      ) : null}
+      {showAddNeth ? (
         <button
           type="button"
           role="menuitem"

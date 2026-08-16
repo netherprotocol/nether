@@ -131,3 +131,5 @@ export const FEATURED_LABELS: Record<FeaturedKind, string> = {
   coinbase: 'Coinbase Wallet',
   trust: 'Trust Wallet',
 };
+
+export const OTHER_WALLET_LABEL = 'Other wallet';
