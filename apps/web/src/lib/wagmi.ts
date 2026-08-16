@@ -5,8 +5,6 @@ import { coinbaseWallet, injected, metaMask, walletConnect } from 'wagmi/connect
 import { walletConnectProjectId } from './connectors.ts';
 import { nethMarkUrl } from './nethMark.ts';
 
-const PAGES_ORIGIN = 'https://rastsislaux.github.io/nether/';
-
 function envString(key: string): string | undefined {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
   const value = env?.[key];
@@ -21,6 +19,18 @@ export function pagesOrigin(): string {
   return new URL(base, origin).href;
 }
 
+export function appOrigin(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const origin = window.location.origin.endsWith('/')
+      ? window.location.origin
+      : `${window.location.origin}/`;
+    const baseRaw = envString('BASE_URL') ?? '/nether/';
+    const base = baseRaw.endsWith('/') ? baseRaw : `${baseRaw}/`;
+    return new URL(base, origin).href;
+  }
+  return pagesOrigin();
+}
+
 export function readWalletConnectProjectId(): string | undefined {
   return walletConnectProjectId(envString('PUBLIC_WALLETCONNECT_PROJECT_ID'));
 }
@@ -29,7 +39,7 @@ function metadata() {
   return {
     name: 'Nether',
     description: 'Permanently capitalized monetary protocol on Base.',
-    url: pagesOrigin() || PAGES_ORIGIN,
+    url: appOrigin(),
     icons: [nethMarkUrl()],
   };
 }
