@@ -1,4 +1,5 @@
-import { Landmark, Gem, Hourglass, Skull } from 'lucide-react';
+import { Landmark, Hourglass, Skull } from 'lucide-react';
+import { NethMark } from '../NethMark.tsx';
 import type { ProtocolSnapshot } from '../../lib/protocol.ts';
 import { formatEth, formatNeth } from '../../lib/format.ts';
 import { SkeletonValue, StatusDot } from './ui.tsx';
@@ -14,7 +15,7 @@ export function TopStats({ snapshot }: { snapshot: ProtocolSnapshot | null }) {
       value: snapshot ? formatEth(snapshot.protectedPrincipal) : null,
     },
     {
-      icon: <Gem className={iconClass} strokeWidth={1.25} aria-hidden="true" />,
+      icon: <NethMark className={iconClass} />,
       label: '$NETH Total Supply',
       value: snapshot ? formatNeth(snapshot.nethSupply) : null,
     },

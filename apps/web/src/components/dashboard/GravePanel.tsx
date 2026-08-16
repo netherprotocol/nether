@@ -1,4 +1,4 @@
-import { ArrowDown, Gem, Info, Landmark } from 'lucide-react';
+import { ArrowDown, Info, Landmark } from 'lucide-react';
 import { zeroAddress } from 'viem';
 import type { DeploymentContracts } from '../../lib/deployments.ts';
 import {
@@ -142,10 +142,7 @@ export function GravePanel({
               <span className="min-w-0 flex-1 text-2xl font-light text-white">
                 {buryQuote && buryQuote > 0n ? formatWei(buryQuote, 6) : '0.0'}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[0.68rem] tracking-[0.14em] text-paper uppercase">
-                <Gem className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} aria-hidden="true" />
-                $NETH
-              </span>
+              <TokenChip label="$NETH" neth />
             </span>
           </label>
           {segments.length > 1 ? (

@@ -1,4 +1,5 @@
-import { Gem, Globe } from 'lucide-react';
+import { Globe } from 'lucide-react';
+import { NethMark } from '../NethMark.tsx';
 import type { DeploymentContracts } from '../../lib/deployments.ts';
 import { formatNeth } from '../../lib/format.ts';
 import type { NetworkConfig } from '../../lib/networks.ts';
@@ -18,7 +19,7 @@ export function NethBar({
     <section className="rounded-xl border border-white/10 bg-[#0c0c0c] px-5 py-4 md:px-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
         <div className="flex min-w-[11rem] items-start gap-3">
-          <Gem className="mt-0.5 h-6 w-6 text-accent" strokeWidth={1.25} aria-hidden="true" />
+          <NethMark className="mt-0.5 h-6 w-6 text-accent" />
           <div>
             <h2 className="text-[0.78rem] tracking-[0.22em] text-accent uppercase">$NETH</h2>
             <p className="mt-1 text-sm text-muted">ERC-20 token on Base</p>

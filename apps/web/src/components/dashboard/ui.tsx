@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ExternalLink } from 'lucide-react';
+import { NethMark } from '../NethMark.tsx';
 import { explorerAddressUrl, type NetworkConfig } from '../../lib/networks.ts';
 import { truncateAddress } from '../../lib/format.ts';
 
@@ -57,9 +58,10 @@ export function SkeletonValue() {
   return <span className="inline-block h-4 w-24 animate-pulse rounded bg-white/10" />;
 }
 
-export function TokenChip({ label }: { label: string }) {
+export function TokenChip({ label, neth }: { label: string; neth?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[0.68rem] tracking-[0.14em] text-paper uppercase">
+      {neth ? <NethMark className="h-3.5 w-3.5 text-accent" /> : null}
       {label}
     </span>
   );

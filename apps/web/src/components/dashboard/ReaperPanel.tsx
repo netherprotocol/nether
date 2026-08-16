@@ -109,7 +109,7 @@ export function ReaperPanel({
                   onChange={(event) => onSellInput(event.target.value)}
                   aria-label="NETH to sell"
                 />
-                <TokenChip label="$NETH" />
+                <TokenChip label="$NETH" neth />
               </span>
             </label>
             <div className="my-2 flex justify-center text-muted">

@@ -54,7 +54,6 @@ Out of scope:
 - Keepers page, indexer, DEX price, Reaper Ratio, market cap
 - Custom domain, SSR, a second frontend app, a shared npm workspace with `apps/keeper/`
 - Email / social login, on-ramps, swaps, ENS profiles as product features
-- Inventing a NETH or wallet logo ([`AGENTS.md`](../../AGENTS.md): no generated marks). `wallet_watchAsset` omits `image` until a user-supplied token asset exists
 - A new NDR
 
 Do not implement redemption, a peg, or Reaper-pays-holders copy.
@@ -127,7 +126,7 @@ WalletConnect v2 requires a **project ID** from [Reown Cloud](https://cloud.reow
 - If unset: hide the WalletConnect row, keep injected / featured extension connectors, show a short note that mobile WalletConnect is unconfigured
 - GitHub Pages build: pass the value into `.github/workflows/web.yml` from a repository **variable** (not a secret-that-looks-private)
 - In Reown Cloud, allow origin `https://rastsislaux.github.io` (and localhost for `astro dev`)
-- Metadata: name `Nether`, url the Pages origin + `base: '/nether/'`. Omit an app icon until a user-supplied mark exists
+- Metadata: name `Nether`, url the Pages origin + `base: '/nether/'`, icons `[nethMarkUrl()]` (`public/neth.svg`)
 
 Do not block Sepolia bury on a missing project ID if MetaMask / Coinbase / Trust **extensions** or in-app browsers still connect.
 
@@ -199,6 +198,8 @@ Do not send `bury` / `approve` / `sellToReaper` / `startAuction` while chain ids
 
 $NETH is a standard ERC-20 (spec §4.1): name `Nether`, symbol `NETH`, 18 decimals. Address comes from the selected network’s deployment JSON (`contracts.neth`). Do not hardcode a second address book.
 
+The token mark is already in the tree: `apps/web/public/neth.svg` (user-supplied, black fill) and `NethMark` for in-app `currentColor` use. Dashboard diamonds (`Gem`) were replaced by that component. Wallet integrations use the public SVG URL from `nethMarkUrl()` (`https://rastsislaux.github.io/nether/neth.svg` on Pages).
+
 ### 6.1 Native `wallet_watchAsset`
 
 ```text
@@ -207,7 +208,7 @@ type: ERC20
 options.address: <deployment NETH>
 options.symbol: NETH
 options.decimals: 18
-options.image: omitted (no token mark in-repo)
+options.image: nethMarkUrl()
 ```
 
 Offer it:
@@ -335,18 +336,21 @@ All new code stays under `apps/web/`. No root `package.json`. No import from `ap
 
 ```
 apps/web/
-├── package.json                 add wagmi, @tanstack/react-query; keep viem 2.55.15
+├── public/neth.svg                  canonical black $NETH mark (already shipped)
+├── package.json                     add wagmi, @tanstack/react-query; keep viem 2.55.15
 ├── src/lib/
-│   ├── networks.ts              add-chain payloads (hex id, official RPC, explorer)
-│   ├── token.ts                 NETH watchAsset + manual-guide fields
-│   ├── slippage.ts              minOut from quote + bps
-│   ├── wagmi.ts                 createConfig, connectors, singleton queryClient
-│   └── abi.ts                   add write fragments
+│   ├── nethMark.ts                  path + nethMarkUrl() (already shipped)
+│   ├── networks.ts                  add-chain payloads (hex id, official RPC, explorer)
+│   ├── token.ts                     NETH watchAsset + manual-guide fields
+│   ├── slippage.ts                  minOut from quote + bps
+│   ├── wagmi.ts                     createConfig, connectors, singleton queryClient
+│   └── abi.ts                       add write fragments
 ├── src/components/
-│   ├── Header.astro             right cluster: NetworkSwitch + ConnectButton island
-│   ├── wallet/                  connect modal, account menu, wrong-network, guides
-│   └── dashboard/               live bury / sell / start / finalize; balances
-└── .github/workflows/web.yml    PUBLIC_WALLETCONNECT_PROJECT_ID on build
+│   ├── NethMark.tsx                 currentColor UI mark (already shipped)
+│   ├── Header.astro                 right cluster: NetworkSwitch + ConnectButton island
+│   ├── wallet/                      connect modal, account menu, wrong-network, guides
+│   └── dashboard/                   live bury / sell / start / finalize; balances
+└── .github/workflows/web.yml        PUBLIC_WALLETCONNECT_PROJECT_ID on build
 ```
 
 `contracts/` unchanged.
@@ -362,7 +366,7 @@ Cover:
 - Add-chain payload: Sepolia `chainId` `0x14a34`, name `Base Sepolia`, RPC `https://sepolia.base.org`, explorer `https://sepolia.basescan.org`, decimals 18
 - Add-chain payload: Base `0x2105`, `https://mainnet.base.org`, `https://basescan.org`
 - Switch/add: matching chain is a no-op; 4902 triggers add; 4100 / missing provider method selects the guide path; 4001 is user-reject
-- `wallet_watchAsset` options: selected-network NETH address, symbol `NETH`, decimals 18, no `image`
+- `wallet_watchAsset` options: selected-network NETH address, symbol `NETH`, decimals 18, `image` = `nethMarkUrl()`
 - Connector grouping: MetaMask / Coinbase / Trust are featured; unknown EIP-6963 ids fall in Other; WalletConnect hidden when project ID is empty
 - MAX bury leaves a gas reserve when ETH > reserve; below reserve fills the full balance
 
@@ -394,7 +398,7 @@ This slice is done when:
 - **SELL NETH** approves exact NETH then `sellToReaper`; inactive/expired auctions cannot sell
 - When idle Reaper ETH exists, a connected user can **start** an auction; when an auction is expired they can **finalize** first
 - On Base Sepolia, the UI offers **Add Base Sepolia**; wallets that implement EIP-3085 get a native prompt; others get RPC URLs, chain id `84532` / `0x14a34`, explorer, and currency
-- The UI offers **Add $NETH** for the selected network’s token address; native `wallet_watchAsset` on supported wallets; manual contract / symbol / decimals guide otherwise
+- The UI offers **Add $NETH** for the selected network’s token address; native `wallet_watchAsset` (including `image: nethMarkUrl()`) on supported wallets; manual contract / symbol / decimals guide otherwise
 - Wrong-network wallets cannot send protocol txs
 - Disconnect returns bury/sell to the previous stub-like disabled state with `Balance: —`
 - `apps/web` tests and build pass; output remains `static`
@@ -406,6 +410,5 @@ This slice is done when:
 Leave these to later NIPs / ops:
 
 - Enabling Base mainnet reads (`contracts/deployments/base.json` + probed mainnet RPC pool). Wallet chain 8453 support in this slice is preparatory only
-- A user-supplied NETH / app icon for `wallet_watchAsset` and WalletConnect metadata
 - Creating the Reown Cloud project and storing `PUBLIC_WALLETCONNECT_PROJECT_ID` (ops, not protocol)
 - Keepers page, harvest from the UI, indexer, custom domain

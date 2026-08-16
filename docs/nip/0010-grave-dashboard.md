@@ -37,7 +37,7 @@ In scope:
 - Ordered public RPC pool for Base Sepolia; sticky-until-fail rotation; RPC-unavailable screen
 - Stub bury / sell / connect-wallet controls (visible, non-functional)
 - Read-only quotes: `quoteBury` / `quoteReaperSale` still run as view calls when the user types an amount
-- Lucide icons only (`@lucide/astro` already in tree; `lucide-react` in the island)
+- Lucide icons for chrome (`@lucide/astro` already in tree; `lucide-react` in the island); `$NETH` uses `NethMark` (user-supplied SVG)
 - Unit tests for the RPC pool and formatting helpers; web CI still typechecks and builds
 
 Out of scope:
@@ -89,22 +89,22 @@ Reuse the holder/docs tokens in `apps/web/src/styles/global.css`:
 
 Dashboard background: same family as docs (`site-glow`), not the holder’s cropped hero. The page scrolls; it is not locked to `100svh`.
 
-### 4.2 Icons (Lucide only)
+### 4.2 Icons
 
-Do not invent, generate, or hand-draw marks. Use Lucide:
+Do not invent, generate, or hand-draw marks. Lucide for chrome; the $NETH mark is the user-supplied SVG in `apps/web/public/neth.svg`, rendered by `NethMark`:
 
-| Use | Lucide icon |
+| Use | Icon |
 |---|---|
-| Total ETH buried | `Landmark` (already used for The Grave on the holder) |
-| $NETH / gem | `Gem` |
-| Current era | `Hourglass` |
-| Reaper / auction | `Skull` |
-| Explorer link | `ExternalLink` |
-| Quote / rate info | `Info` |
-| Amount arrow / chevrons | `ChevronDown` / `ArrowDown` |
-| Network (no Base logo asset) | `Globe` plus the word **Base** / **Base Sepolia**. Optional 8px disc in Base brand blue `#0052FF` as a CSS color, not a drawn logo. |
+| Total ETH buried | Lucide `Landmark` (already used for The Grave on the holder) |
+| $NETH | `NethMark` (`apps/web/src/components/NethMark.tsx`; `currentColor` in UI, black fill in `public/neth.svg` for wallets) |
+| Current era | Lucide `Hourglass` |
+| Reaper / auction | Lucide `Skull` |
+| Explorer link | Lucide `ExternalLink` |
+| Quote / rate info | Lucide `Info` |
+| Amount arrow / chevrons | Lucide `ChevronDown` / `ArrowDown` |
+| Network (no Base logo asset) | Lucide `Globe` plus the word **Base** / **Base Sepolia**. Optional 8px disc in Base brand blue `#0052FF` as a CSS color, not a drawn logo. |
 
-Do not add a second icon pack. Do not paste a traced Base logo.
+Do not add a second icon pack. Do not paste a traced Base logo. Do not keep Lucide `Gem` as a stand-in for $NETH.
 
 ### 4.3 Top stats bar
 
@@ -419,7 +419,7 @@ Do not run these until this NIP is explicitly started.
 
 This slice is done when:
 
-- `/grave` matches the screenshot layout (dark cards, accent, four top stats, GRAVE / REAPER / $NETH **without numbers**) using Lucide icons only
+- `/grave` matches the screenshot layout (dark cards, accent, four top stats, GRAVE / REAPER / $NETH **without numbers**) using Lucide icons plus `NethMark` for $NETH
 - Numbers on Sepolia come from the §6 contracts via the §8 pool, not from mock copy
 - “ETH remaining in era” is capacity remaining, not a fake era timer
 - Base mainnet is visible in the header switch and disabled; Sepolia is selected and live
