@@ -32,8 +32,8 @@ The implementation MUST preserve all of the following invariants.
 | Burial finality | ETH submitted through `bury()` can never be redeemed by the burier. |
 | Protected principal | `protectedPrincipal` equals cumulative ETH successfully buried and never decreases. |
 | No principal spending | Reaper, governance, operators, and strategy managers cannot spend protected principal. |
-| Yield-only Reaper | Reaper funding is limited to value demonstrably above protected principal after accounting for all prior harvested yield and strategy losses. |
-| Loss recovery first | If strategy NAV falls below the protected-capital watermark, no yield can be harvested until the deficit has been recovered. |
+| Yield-only Reaper | Reaper funding is limited to value demonstrably above `requiredBacking` after accounting for all prior harvested yield and live-adapter strategy losses. Capital marked impaired after a failed migration withdraw is excluded from `requiredBacking` and is not refilled from harvestable yield. |
+| Loss recovery first | If active Grave capital falls below `requiredBacking`, no yield can be harvested until that live-adapter deficit has been recovered. Impairment of capital left in a former adapter does not zero harvest on remaining active capital. |
 | Deterministic issuance | NETH issuance is determined only by the immutable era schedule and the ETH amount buried. |
 | No discretionary minting | No admin, governance, strategy, or upgrade path can mint NETH. Only the Grave can mint according to the era algorithm. |
 | Reaper burn | 100% of NETH acquired by the Reaper is burned immediately. |
@@ -159,28 +159,30 @@ Burial is irreversible immediately after successful transaction completion.
 
 ```text
 protectedPrincipal = total cumulative ETH buried
+impairedCapital    = sum of unpaid impaired principal (initially 0)
+requiredBacking    = protectedPrincipal - impairedCapital
+currentNAV         = idleETH + activeStrategy.totalAssetsInETH()
+harvestable        = max(0, currentNAV - requiredBacking - alreadyReservedForReaper)
 ```
 
-This number only increases.
+`protectedPrincipal` only increases. It MUST NOT decrease. New `bury()` MUST NOT reduce `impairedCapital`. Only ETH actually returned from an impaired adapter reduces `impairedCapital`.
 
-For economic accounting, the Grave additionally maintains a high-watermark system:
+`currentNAV` is **active** Grave capital: idle ETH on Grave plus the **active** adapter only. Former adapters on the impaired list are not included.
 
-```text
-requiredBacking = protectedPrincipal
-currentNAV      = idleETH + strategy.totalAssetsInETH()
-harvestable     = max(0, currentNAV - requiredBacking - alreadyReservedForReaper)
-```
+`requiredBacking` is the harvest watermark. A harvest MUST never cause post-harvest NAV backing to fall below `requiredBacking`. A harvest MAY complete while `currentNAV < protectedPrincipal` when `impairedCapital > 0`.
 
-A harvest MUST never cause post-harvest NAV backing to fall below `protectedPrincipal`.
+Invariant: `impairedCapital == sum of owed[adapter]` over the impaired adapter list.
 
 `alreadyReservedForReaper` means yield that has already been removed from strategy backing and transferred to the Reaper or a dedicated Reaper funding escrow. It MUST NOT be counted again.
 
 ### 6.3 Strategy losses
 
+Live-adapter losses (no migration, or a migration that fully withdraws) leave `impairedCapital` and per-adapter owed amounts unchanged.
+
 If:
 
 ```text
-currentNAV < protectedPrincipal
+currentNAV < requiredBacking
 ```
 
 then:
@@ -191,9 +193,11 @@ harvestable = 0
 
 independent of historical yield.
 
-Future gains first restore NAV to protected principal. Only value above that level can subsequently be harvested.
+Future gains on **active** capital first restore NAV to `requiredBacking`. Only value above that watermark can subsequently be harvested.
 
-No loss is socialized to NETH holders through new minting. No NETH is minted as compensation. No external recapitalization is required by the protocol.
+`currentNAV < protectedPrincipal` after impairment MUST NOT by itself zero harvest forever. Yield earned on remaining active capital continues to go 100% to the Reaper.
+
+No loss is socialized to NETH holders through new minting. No NETH is minted as compensation. No external recapitalization is required by the protocol. Harvestable yield MUST NOT be retained to refill historical Grave size.
 
 ### 6.4 Strategy interface
 
@@ -235,15 +239,80 @@ It requires:
 3. a 14-day timelock when replacing an already-active adapter;
 4. an adapter address fixed at scheduling time;
 5. execution after the delay when replacing an already-active adapter; the first adapter (from unset) MAY be executed immediately after scheduling;
-6. withdrawal/migration of all recoverable assets from the old adapter;
+6. withdrawal/migration of all recoverable assets from the old adapter, with a bounded on-chain retry budget before leftover capital may be marked impaired (§6.6);
 7. deposit into the new adapter;
 8. post-migration NAV verification.
+
+On-chain migration retry constants:
+
+```text
+STRATEGY_MIGRATION_WITHDRAW_FAILURE_LIMIT (N) = 3
+STRATEGY_MIGRATION_RETRY_DELAY                = 1 day
+```
+
+Each `executeStrategyMigration` MUST attempt to pull all recoverable ETH from the old adapter into Grave.
+
+- If the pull fully succeeds, complete migration: deposit idle ETH into the scheduled adapter, clear pending, and clear the failure counter.
+- If the pull fails and the failure count for this pending migration is still below `N`, do **not** switch `activeStrategy`. Commit a failed attempt, start a 1-day cooldown, and emit a failure event. Pending remains.
+- If the pull fails and this attempt is the `N`th failure, complete migration anyway: switch to the scheduled adapter, record impairment as specified in §6.6, and deposit whatever ETH actually sits on Grave into the new adapter.
+
+The first execute of a pending replacement still requires the 14-day delay (or immediate first activation when none is active). After a recorded failure, a retry MAY run no sooner than `lastFailureTime + 1 day`; it MUST NOT restart the 14-day clock.
+
+A failed attempt MUST be a state-changing success, not a Solidity revert of the whole transaction. A revert would undo the failure counter and make `N` unenforceable.
+
+Cancel of a pending schedule clears pending, the failure counter, and the cooldown. A new schedule starts a new 14-day clock and a new `N` budget.
+
+A migration execute fails the withdraw step when the old adapter is set and recoverable ETH is not fully obtained on Grave in that transaction. That includes `withdrawETH` reverting, `totalAssetsInETH` reverting so the pull cannot be sized from the view (the execute MUST still attempt a pull), and a non-reverting pull that leaves reported or remaining adapter assets unreceived.
+
+ETH that does arrive on Grave during a failed attempt stays on Grave (idle). It is not sent back to the old adapter and is not sent to the owner. Later successful execute, or the impairing `N`th execute, deposits that idle ETH into the new adapter.
+
+Do not treat a fabricated high `totalAssetsInETH` as proof of assets for lowering the harvest watermark. Impairment accounting uses observed Grave/active NAV, not the old adapter’s claimed NAV (§16.3).
 
 The monetary contracts themselves are not proxy-upgradeable.
 
 A strategy migration MUST NOT make protected principal withdrawable to the multisig. Migration functions must route recovered assets directly through the Grave and into the newly approved adapter.
 
 An emergency pause MAY stop new strategy deposits, harvests, migrations, and Reaper auction creation. It MUST NOT enable principal withdrawal. ERC-20 transfers remain unpaused.
+
+### 6.6 Impaired capital and permissionless recovery
+
+After the retry budget in §6.5 is exhausted, leftover capital in the former adapter is **impaired**: still recoverable in principle, no longer part of active Grave capital, and no longer a reason to withhold Reaper yield.
+
+There is still only one active investing adapter. Listed impaired adapters are residual pull sources, not a second strategy.
+
+On the impairing execute (the `N`th failed pull), after any ETH received this transaction is on Grave and before or when switching adapters:
+
+```text
+observedActive = address(this).balance
+                 + assets already in the new adapter (should be 0)
+delta          = max(0, requiredBacking - observedActive)
+impairedCapital += delta
+owed[old]       += delta
+```
+
+That sets `requiredBacking` down to observed active capital at that instant, so harvestable is 0 immediately after impairment and future gains on remaining capital are harvestable. It MUST NOT mint harvestable yield out of a lying old NAV. If `old` is already on the list, add `delta` to the existing owed amount; do not reset it.
+
+When `delta > 0`, write the old adapter into an on-chain list if it is not already present. Membership means this adapter still owes Grave, not that it currently holds ETH.
+
+An adapter MUST remain on the list while `owed[adapter] > 0`. It MUST NOT be removed because an external balance is 0, `totalAssetsInETH()` returns 0 or reverts, `recoverImpaired` reverts or pays 0, a simulation suggests a pull would be useless, or a later `bury()` or live-adapter profit increased active capital.
+
+A partial repay reduces `owed[adapter]` and `impairedCapital` by the credited pay and leaves the adapter on the list. Remove it if and only if `owed[adapter]` becomes 0 after an actual ETH receipt credited to that adapter. A bricked adapter that never pays stays on the list indefinitely.
+
+Anyone MAY call permissionless `recoverImpaired(adapter)` when `owed[adapter] > 0`, subject to reentrancy protection. `withdrawETH` recipient is Grave only. Realized amount is the Grave balance delta, never the adapter’s return value alone:
+
+```text
+pay              = min(received, owed[adapter])
+owed[adapter]   -= pay
+impairedCapital -= pay
+```
+
+Active NAV rises by `received`. `requiredBacking` rises by `pay`. Recovered ETH up to `owed[adapter]` is principal returning, not harvestable yield. Any `received` above `owed[adapter]` is unsolicited surplus (§16.2), not a reason to reduce another adapter’s debt.
+
+Then existing idle-deploy into the current `activeStrategy` (idle is allowed if deposit reverts). There is no cooldown, no protocol-imposed retry limit, and no owner-only gate on recover.
+
+A reverting recover call MAY revert. The protocol MUST NOT try/catch recover in a way that credits `owed` / `impairedCapital` without ETH actually received, and MUST NOT drop the adapter on a 0-pay or reverting recover.
+
+If `totalAssetsInETH` reverted for the whole attempt window, still list the adapter, still record `owed[old] += delta`, and still apply the `observedActive` formula (the missing ETH is whatever `requiredBacking` exceeded). Under-counting impaired capital is acceptable; over-counting from a fabricated NAV is not.
 
 ## 7. Yield harvesting
 
@@ -253,18 +322,22 @@ Conceptually:
 
 ```text
 NAV before harvest
-- protectedPrincipal
+- requiredBacking
 - previously reserved Reaper ETH
 = maximum harvestable yield
 ```
 
+where `requiredBacking = protectedPrincipal - impairedCapital` (§6.2).
+
 The realized amount is transferred to the Reaper funding balance.
+
+Harvest MUST NOT pull active backing below `requiredBacking`. It MAY complete while `currentNAV < protectedPrincipal` when `impairedCapital > 0`.
 
 No caller reward is paid from protected principal. If keeper incentives are required operationally, they must be funded externally or included as a bounded execution expense inside realized yield before the Reaper allocation; the production default is zero keeper incentive.
 
 Harvest MUST use checks-effects-interactions and reentrancy protection.
 
-If a strategy reports unrealized NAV that cannot safely be withdrawn as ETH, `harvest()` MUST be limited to the amount the adapter can actually realize without violating principal protection.
+If a strategy reports unrealized NAV that cannot safely be withdrawn as ETH, `harvest()` MUST be limited to the amount the adapter can actually realize without violating `requiredBacking` protection.
 
 ## 8. Reaper
 
@@ -457,8 +530,12 @@ The admin can:
 
 - schedule a new strategy adapter;
 - execute a scheduled strategy migration after 14 days when an adapter is already active, or immediately when none is active;
+- retry a pending migration execute after a recorded withdraw failure, no sooner than 1 day later, without restarting the 14-day clock;
+- cancel a pending schedule (clears the retry budget);
 - pause strategy-sensitive operations during an emergency;
 - unpause after remediation.
+
+Permissionless callers, not only the admin, MAY `recoverImpaired` from a listed former adapter into Grave and then into the single active adapter.
 
 The admin cannot:
 
@@ -468,7 +545,9 @@ The admin cannot:
 - change Reaper curve;
 - redirect Reaper ETH;
 - seize user NETH;
-- withdraw genesis locked liquidity.
+- withdraw genesis locked liquidity;
+- send recovered or migrated ETH to the owner or an arbitrary EOA;
+- drop an impaired adapter from the list while `owed[adapter] > 0`.
 
 Access control SHOULD use audited OpenZeppelin 5.x primitives. A timelock/multisig arrangement must be explicit and tested; production ownership must never remain with the deployer EOA.
 
@@ -499,9 +578,14 @@ currentEraBuried()
 currentRewardRate()
 quoteBury(ethAmount)
 protectedPrincipal()
+impairedCapital()
+requiredBacking()
 currentNAV()
 harvestableYield()
 activeStrategy()
+impairedOwed(adapter)
+impairedAdapterCount()
+impairedAdapterAt(index)
 availableReaperETH()
 activeAuction()
 currentReaperRate()
@@ -523,6 +607,9 @@ StrategyDeposit(strategy, ethAmount)
 YieldHarvested(ethAmount, reaperBalance)
 StrategyMigrationScheduled(oldStrategy, newStrategy, executeAfter)
 StrategyMigrated(oldStrategy, newStrategy, navBefore, navAfter)
+StrategyMigrationWithdrawFailed(oldStrategy, newStrategy, attempt, reason)
+StrategyImpaired(oldStrategy, newStrategy, impairedDelta, impairedCapital)
+ImpairedRecovered(adapter, received, pay, impairedCapital)
 EmergencyPause(account)
 EmergencyUnpause(account)
 ReapingStarted(auctionId, ethBudget, snapshottedRewardRate, startTime, endTime)
@@ -562,7 +649,10 @@ The Grave dashboard displays:
 
 - cumulative ETH buried;
 - protected principal;
-- current strategy NAV;
+- impaired capital and per-adapter owed amounts;
+- the impaired adapter list (do not hide an adapter that still owes because its venue balance is 0);
+- required backing (harvest watermark);
+- current strategy NAV (active capital only; do not display impaired ETH as active Grave capital);
 - current strategy;
 - realized yield sent to Reaper;
 - Reaper Ratio where market data is available.
@@ -695,7 +785,9 @@ The implementation and audit MUST cover:
 - governance key compromise;
 - timelock bypass;
 - strategy migration to an asset-stealing adapter;
-- inability to recover from a deprecated strategy;
+- inability to recover from a deprecated strategy (retry budget, then impaired list and permissionless recover);
+- owner burning the migration retry budget in one block;
+- dropping an impaired adapter while it still owes ETH;
 - ERC-20 approval races;
 - denial of service through tiny transactions;
 - arithmetic behavior at very high era numbers;
@@ -704,9 +796,9 @@ The implementation and audit MUST cover:
 
 ### 16.2 Forced ETH and donations
 
-Unexpected ETH sent directly to Grave MUST NOT increase `protectedPrincipal` and MUST NOT mint NETH.
+Unexpected ETH sent directly to Grave MUST NOT increase `protectedPrincipal` and MUST NOT mint NETH. Donations and forced ETH MUST NOT reduce `impairedCapital` or any owed amount.
 
-It may be treated as protocol surplus/yield only if accounting can distinguish it safely. The simpler recommended implementation treats unsolicited ETH as surplus backing and permits it to become harvestable only when total NAV exceeds protected principal. This cannot reduce depositor claims because there are no redemption claims.
+It may be treated as protocol surplus/yield only if accounting can distinguish it safely. The simpler recommended implementation treats unsolicited ETH as surplus backing and permits it to become harvestable only when total NAV exceeds `requiredBacking`. This cannot reduce depositor claims because there are no redemption claims. Surplus received on `recoverImpaired` above that adapter’s owed amount is this same class of unsolicited ETH (§6.6); it MUST NOT reduce another adapter’s debt.
 
 Direct ETH transfers to Reaper outside the defined funding path MAY increase Reaper available balance but MUST emit/account for donations separately from harvested yield.
 
@@ -733,13 +825,16 @@ Required test classes:
 - NETH mint authorization;
 - burn behavior;
 - principal monotonicity;
-- harvest at NAV below/equal/above principal;
-- loss then recovery;
+- harvest at NAV below/equal/above `requiredBacking`;
+- harvest while `currentNAV < protectedPrincipal` when `impairedCapital > 0`;
+- loss then recovery on the live adapter;
 - Reaper rate at start, midpoint, end, and after expiration;
 - full and partial Reaper fills;
 - rollover;
 - auction start with any positive available Reaper ETH (no minimum budget);
-- strategy scheduling, 14-day replacement delay, and immediate first activation.
+- strategy scheduling, 14-day replacement delay, and immediate first activation;
+- migration withdraw failures: `N-1` committed failed executes (adapter unchanged, 1-day cooldown), then an `N`th execute that switches, lists the old adapter when `delta > 0`, and raises `impairedCapital`;
+- permissionless `recoverImpaired`: partial repay leaves the adapter listed; remove only when owed reaches 0 from credited ETH; 0-pay and reverting recovers do not drop the adapter or reduce owed.
 
 ### Fuzz/property tests
 
@@ -747,6 +842,11 @@ Properties MUST include:
 
 ```text
 protectedPrincipal never decreases
+impairedCapital == sum of owed[adapter] over the impaired list
+bury does not reduce impairedCapital or any owed amount
+donated / forced ETH does not reduce impairedCapital or any owed amount
+harvest never decreases protectedPrincipal
+post-successful-harvest currentNAV >= requiredBacking
 total NETH minted == deterministic burial issuance
 Reaper can never spend Grave principal
 Reaper-acquired NETH never remains in Reaper after successful settlement
@@ -754,6 +854,7 @@ currentReaperRate is monotonic seller-favorable during an auction
 era reward rate never increases
 era capacity never decreases
 no admin path can mint NETH
+an impaired adapter stays listed while owed[adapter] > 0
 ```
 
 ### Fork tests
@@ -768,7 +869,7 @@ Base fork tests MUST validate:
 
 ### Invariant testing
 
-Run stateful invariant tests with randomized burial, harvest, auction, settlement, donation, pause, migration scheduling, and strategy profit/loss actions.
+Run stateful invariant tests with randomized burial, harvest, auction, settlement, donation, pause, migration scheduling, failed migration withdraw retries, impaired recovery, and strategy profit/loss actions.
 
 ## 18. Deployment procedure and launch-cost constraint
 
@@ -902,6 +1003,8 @@ The following decisions are final for Nether v1:
 | Monetary core | Immutable/non-proxy |
 | Strategy | Replaceable adapter |
 | Strategy change delay | 14 days when replacing an active adapter; initial set from unset may execute immediately |
+| Migration withdraw failure limit | 3 recorded failed pulls, then impair |
+| Migration retry delay | 1 day between failed execute attempts; does not restart the 14-day clock |
 | Strategy leverage | Forbidden |
 | Protocol yield fee | 0% |
 | Strategy selection | Intentionally implementation-time configurable within this specification's constraints |
@@ -925,6 +1028,7 @@ The agent MUST NOT reinterpret or change:
 - era mathematics;
 - burial finality;
 - protected-principal rules;
+- required-backing / impaired-capital harvest accounting;
 - Reaper auction economics;
 - burn behavior;
 - yield allocation;

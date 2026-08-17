@@ -7,13 +7,14 @@
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Working versions: Proposed [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (not accepted)
 - Strategy admin: Accepted [`NDR-0005`](../ndr/0005-strategy-security.md)
+- Harvest watermark and migration execute: amended by Accepted [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md). Implementation: [`NIP-0012`](0012-impaired-strategy-capital.md) (Planned). Until that NIP starts, shipped `Grave.sol` still best-effort switches on a failed withdraw.
 - License: [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md) (`SPDX-License-Identifier: UNLICENSED`)
 
 This plan is the W4 breakdown. It implements spec §6.2–§6.5, §7, §10–§11, and the harvest / strategy views and events in §12–§13. It does not implement a production adapter, deploy scripts, a DEX, or pause on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).
 
 ## 1. Purpose
 
-Ship the replaceable economic surface: Grave talks to `IStrategyAdapter`, harvests yield above protected principal into Reaper, and lets admin replace the adapter after a 14-day public delay. Grave admin is strategy replacement only. Investing pause, if any, lives on the adapter. Reaper is not paused.
+Ship the replaceable economic surface: Grave talks to `IStrategyAdapter`, harvests yield above `requiredBacking` into Reaper, and lets admin replace the adapter after a 14-day public delay. Grave admin is strategy replacement only. Investing pause, if any, lives on the adapter. Reaper is not paused. Impaired leftover capital after failed migration withdraw is [`NIP-0012`](0012-impaired-strategy-capital.md).
 
 M0 must not depend on AAVE. The approved extra split is a **test invest adapter** under `contracts/test/` ([`NIP-0000`](0000-the-roadmap.md) §2). Production adapter code is W5, after its NDR.
 
@@ -191,7 +192,7 @@ currentEra / currentEraCapacity / currentEraBuried / currentRewardRate / quoteBu
 protectedPrincipal()                       // unchanged semantics
 totalNethMinted()
 currentNAV()                               // idleETH + adapter.totalAssetsInETH() (0 if no adapter)
-harvestableYield()                         // max(0, currentNAV - protectedPrincipal)
+harvestableYield()                         // max(0, currentNAV - requiredBacking)
 activeStrategy() → address                 // address(0) until first execute
 pendingStrategy() → (adapter, executeAfter) // zeros when none scheduled
 
@@ -216,7 +217,7 @@ OpenZeppelin 5.x `Ownable` takes `initialOwner` in the constructor. `Ownable2Ste
 | View | Behavior |
 |---|---|
 | `currentNAV()` | `address(this).balance + (activeStrategy == 0 ? 0 : adapter.totalAssetsInETH())` |
-| `harvestableYield()` | `max(0, currentNAV() - protectedPrincipal)` |
+| `harvestableYield()` | `max(0, currentNAV() - requiredBacking())` where `requiredBacking = protectedPrincipal - impairedCapital` ([`NDR-0009`](../ndr/0009-impaired-strategy-capital.md)) |
 | `activeStrategy()` | current adapter; `address(0)` at deploy |
 | `pendingStrategy()` | scheduled adapter and `executeAfter`; zeroed when none |
 | `reaper()` | harvest recipient; `address(0)` until `setReaper` |
@@ -263,6 +264,8 @@ event StrategyMigrationScheduled(address indexed oldStrategy, address indexed ne
 event StrategyMigrated(address indexed oldStrategy, address indexed newStrategy, uint256 navBefore, uint256 navAfter);
 ```
 
+Impaired-capital events (`StrategyMigrationWithdrawFailed`, `StrategyImpaired`, `ImpairedRecovered`) are [`NIP-0012`](0012-impaired-strategy-capital.md).
+
 Also emit (not in the §13 minimum list):
 
 ```text
@@ -284,21 +287,21 @@ Anyone may call it when Reaper is set, and there is positive harvestable yield t
 ### 7.1 Amount
 
 ```text
-reportedHarvestable = max(0, currentNAV - protectedPrincipal)
+reportedHarvestable = max(0, currentNAV - requiredBacking)
 ```
 
 Revert if `reportedHarvestable == 0`.
 
-Do not treat reported adapter NAV as a license to send idle ETH that is still needed as principal. Harvest may send only:
+Do not treat reported adapter NAV as a license to send idle ETH that is still needed as backing. Harvest may send only:
 
-1. **idle surplus** `max(0, address(this).balance - protectedPrincipal)` — donations or undeployed surplus sitting on Grave above the watermark, plus
+1. **idle surplus** `max(0, address(this).balance - requiredBacking)` — donations or undeployed surplus sitting on Grave above the watermark, plus
 2. **ETH actually received** from `adapter.withdrawETH` in this transaction (Grave balance delta).
 
 Never pass a `recipient` other than Grave. Cap the withdraw request by `reportedHarvestable - idleSurplus` (0 if idle surplus already covers it). If there is no adapter, only idle surplus can be harvested.
 
 ```text
 idle            = address(this).balance
-idleSurplus     = max(0, idle - protectedPrincipal)
+idleSurplus     = max(0, idle - requiredBacking)
 toPull          = reportedHarvestable > idleSurplus ? reportedHarvestable - idleSurplus : 0
 
 if toPull > 0 and activeStrategy != 0:
@@ -311,7 +314,7 @@ else:
 ethHarvested = idleSurplus + received
 ```
 
-When principal is in the adapter and idle is below `protectedPrincipal`, `idleSurplus` is 0 and harvest is only `received`. Donations then stay on Grave as backing; surplus comes out of the adapter. That is still yield-only: remaining `idle + adapter assets` should match the honest NAV path.
+When principal is in the adapter and idle is below `requiredBacking`, `idleSurplus` is 0 and harvest is only `received`. Donations then stay on Grave as backing; surplus comes out of the adapter. That is still yield-only: remaining `idle + adapter assets` should match the honest NAV path.
 
 Revert if `ethHarvested == 0` (reported yield that cannot be realized).
 
@@ -325,11 +328,11 @@ Checks-effects-interactions: compute `ethHarvested`, then `Address.sendValue(pay
 
 Reaper `receive()` credits `msg.sender == grave` as harvest ([`NIP-0005`](0005-reaper.md) §4.2). ETH that arrives during an active auction stays in `availableReaperETH`, not that auction’s remaining budget.
 
-After realizing and before sending, cap `ethHarvested` at `max(0, currentNAV() - protectedPrincipal)` so the send cannot take reported NAV below principal (spec §6.2 / §7). If `currentNAV() < protectedPrincipal` after realization, revert (`HarvestBreachesPrincipal`). If the cap leaves nothing to send, revert (`ZeroHarvest`). Combined with §7.1, idle principal is not sent when the adapter pays nothing. The cap also covers venues such as Aave aTokens, where `balanceOf` rounding can make a full pre-withdraw surplus pull leave remaining NAV 1 wei short: that wei stays idle on Grave as backing instead of aborting harvest.
+After realizing and before sending, cap `ethHarvested` at `max(0, currentNAV() - requiredBacking)` so the send cannot take reported NAV below the watermark (spec §6.2 / §7). If `currentNAV() < requiredBacking` after realization, revert (`HarvestBreachesPrincipal`). If the cap leaves nothing to send, revert (`ZeroHarvest`). Combined with §7.1, idle backing is not sent when the adapter pays nothing. The cap also covers venues such as Aave aTokens, where `balanceOf` rounding can make a full pre-withdraw surplus pull leave remaining NAV 1 wei short: that wei stays idle on Grave as backing instead of aborting harvest.
 
 ### 7.3 Loss then recovery
 
-If `currentNAV < protectedPrincipal`, `harvestableYield() == 0` and `harvest()` reverts, independent of historical yield (spec §6.3). Later gains restore NAV to the watermark first; only value above `protectedPrincipal` is harvestable. No compensatory mint. No recapitalization function.
+If `currentNAV < requiredBacking`, `harvestableYield() == 0` and `harvest()` reverts, independent of historical yield (spec §6.3). Live-adapter losses do not change `impairedCapital`. Later gains restore NAV to the watermark first; only value above `requiredBacking` is harvestable. After impairment, `currentNAV < protectedPrincipal` MUST NOT zero harvest forever ([`NDR-0009`](../ndr/0009-impaired-strategy-capital.md)). No compensatory mint. No recapitalization function.
 
 Zero yield: Reaper receives nothing from Grave; principal and issuance are unchanged (spec §15.3).
 
@@ -358,38 +361,29 @@ Spec §11’s admin component includes propose/cancel. Spec §16.1 requires test
 
 1. Revert if none pending.
 2. Emit `StrategyMigrationCancelled(activeStrategy, pending)`.
-3. Clear the pending slot.
+3. Clear the pending slot, the migration failure counter, and the retry cooldown.
 
-Cancel is how a recovered admin clears a bad schedule and posts another (new 14-day clock). There is no Grave pause to freeze execute; refusing to call execute, or cancelling, is the delay-window response.
+Cancel is how a recovered admin clears a bad schedule and posts another (new 14-day clock and a new `N` budget). There is no Grave pause to freeze execute; refusing to call execute, or cancelling, is the delay-window response. Cancel does not change `impairedCapital` or the impaired list.
 
 ### 8.3 `executeStrategyMigration()` (`onlyOwner`, `nonReentrant`)
 
-One transaction. A revert undoes storage writes and native-ETH sends.
+Superseded for withdraw-failure behavior by [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) / [`NIP-0012`](0012-impaired-strategy-capital.md). The 0-arg selector, 14-day delay when replacing a live adapter, immediate first activation ([`NDR-0008`](../ndr/0008-initial-strategy-immediate.md)), routing recovered ETH Grave → new adapter, and “never to `owner()`” remain.
 
-```text
-require owner, pending set
-if activeStrategy != 0: require block.timestamp >= executeAfter
-old = activeStrategy; new = pending adapter
-navBefore = currentNAV()
-if old != 0: try/catch withdrawETH(old.totalAssetsInETH(), address(this))
-    // on revert, continue with ETH already on Grave
-    // (spec §6.5 “recoverable”; §16.1 deprecated-strategy escape)
-idle = address(this).balance
-activeStrategy = new; clear pending
-if idle > 0: new.depositETH{value: idle}()    // revert undoes the slot write
-navAfter = currentNAV()
-emit StrategyMigrated(old, new, navBefore, navAfter)
-emit StrategyDeposit(new, idle)               // if idle > 0
-```
+Do **not** try/catch `withdrawETH` and switch anyway on the first failure. Each execute attempts to pull all recoverable ETH from the old adapter:
 
-Verify actual ETH received from the old adapter by Grave’s balance delta, not only the returned `received` (spec §16.3). Never pass `owner()` as `recipient`.
+- full success → switch, deposit idle, clear pending and the failure counter;
+- failed pull and failures still below `N = 3` → do not switch; commit the failure; 1-day cooldown; pending remains; the transaction succeeds;
+- `N`th failed pull → switch anyway, record `impairedCapital` / per-adapter owed from **observed** active capital, list the old adapter if `delta > 0`, deposit idle into the new adapter.
+
+Verify received ETH by Grave balance delta (spec §16.3). Failed-attempt ETH stays idle on Grave.
 
 Post-migration verification (spec §6.5):
 
 - recovered ETH went to Grave, then into the new adapter, never to `owner()`;
 - the deposited adapter is the address fixed at schedule time;
 - do **not** require `navAfter >= navBefore` (losses are allowed);
-- do **not** require `navAfter >= protectedPrincipal` (migration must still escape a deficit or deprecated adapter).
+- do **not** require `navAfter >= protectedPrincipal` (migration must still escape a deficit or deprecated adapter);
+- after impairment, harvest watermark is `requiredBacking`, not `protectedPrincipal`.
 
 ### 8.4 What migration must not do
 
@@ -493,7 +487,7 @@ Spec §17: tests that introduce the behavior ship with the slice. W4 does not ru
 
 Replace `Grave.t.sol` `test_noWithdrawRedeemHarvestPauseOrOwner` with: no `withdraw` / `redeem` / `unstake` / `pause` / `unpause`; `harvest` and `owner` **do** exist. Keep “no withdraw of principal”.
 
-When `activeStrategy() == address(0)`, `currentNAV() == address(this).balance` as in W2. Invariant `currentNAV >= protectedPrincipal` remains true **without** a loss-making adapter; the strategy invariant handler must **not** assert that globally (spec §6.3).
+When `activeStrategy() == address(0)`, `currentNAV() == address(this).balance` as in W2. Invariant `currentNAV >= requiredBacking` remains true **without** a loss-making adapter; the strategy invariant handler must **not** assert `currentNAV >= protectedPrincipal` globally (spec §6.3 / [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md)).
 
 ### 13.1 Unit — `Strategy.t.sol` / extended `Grave.t.sol`
 
@@ -508,10 +502,10 @@ Wiring:
 NAV and harvest:
 
 - no strategy: donation increases `currentNAV` and `harvestableYield`; `harvest` sends idle surplus to Reaper; `protectedPrincipal` unchanged; Reaper `totalHarvestedETH` increases, `totalDonatedETH` does not
-- NAV below principal: `harvestableYield() == 0`; `harvest` reverts; principal unchanged
-- NAV equal principal: `harvest` reverts
-- NAV above principal: harvests the surplus only; post-harvest `currentNAV >= protectedPrincipal`
-- loss then recovery: adapter `simulateLoss` below principal → no harvest; `simulateProfit` back above → only the excess is harvestable
+- NAV below `requiredBacking`: `harvestableYield() == 0`; `harvest` reverts; principal unchanged
+- NAV equal `requiredBacking`: `harvest` reverts
+- NAV above `requiredBacking`: harvests the surplus only; post-harvest `currentNAV >= requiredBacking`
+- loss then recovery: adapter `simulateLoss` below `requiredBacking` → no harvest; `simulateProfit` back above → only the excess is harvestable
 - reported NAV high, realizable low: harvest equals actual withdrawn + idle surplus, not the lie
 - adapter `withdrawETH` recipient is Grave; admin balance does not increase
 - `YieldHarvested` amount matches ETH gained on Reaper
@@ -532,7 +526,7 @@ Scheduling / migration:
 - non-owner schedule/execute/cancel reverts
 - migration withdraws from old → Grave → new; owner ETH unchanged; `StrategyMigrated` has `navBefore` / `navAfter`
 - `navAfter < navBefore` allowed (loss during migration)
-- reverting old `withdrawETH`: execute continues (best effort); ETH stuck in the old adapter is missing from NAV; owner balance unchanged
+- reverting old `withdrawETH`: see [`NIP-0012`](0012-impaired-strategy-capital.md) — `N-1` committed failed executes (adapter unchanged), then an `N`th execute that switches, lists the old adapter when `delta > 0`, and raises `impairedCapital`; owner balance still unchanged
 - scheduled address is the one executed; cannot swap in a different adapter at execute
 - no path sends recovered ETH to `owner()`
 
@@ -554,8 +548,8 @@ Absence:
 protectedPrincipal never decreases
 protectedPrincipal increases by exactly msg.value on successful bury
 harvest never decreases protectedPrincipal
-harvest never sends idle ETH that is required as principal (§7.1)
-post-successful-harvest currentNAV >= protectedPrincipal for an honest adapter
+harvest never sends idle ETH that is required as `requiredBacking` (§7.1)
+post-successful-harvest currentNAV >= requiredBacking for an honest adapter
 Reaper can never spend Grave principal
 no admin path can mint NETH
 owner / migration cannot transfer principal to owner
@@ -587,7 +581,7 @@ Foundry tests with `TestInvestAdapter`, not a Python sim and not a Base fork:
 | 0.0% | burials only | `harvest` cannot pull principal; Reaper `totalHarvestedETH` unchanged from Grave |
 | 1.0% / 1.5% / 2.2% / 3.0% | scripted profit ≈ `principal * y` | harvest sends that surplus (within rounding) to Reaper; principal unchanged; issuance unchanged |
 
-These are scenario tests, not promised returns (spec §15.2). Full era-table annual-budget commentary can stay off-chain; W4 proves the accounting identity `harvested <= max(0, NAV - principal)` under those yields.
+These are scenario tests, not promised returns (spec §15.2). Full era-table annual-budget commentary can stay off-chain; W4 proves the accounting identity `harvested <= max(0, NAV - requiredBacking)` under those yields.
 
 ### 13.5 Not in W4
 
@@ -616,9 +610,9 @@ W4 is done when:
 
 - `IStrategyAdapter` is still the spec §6.4 surface; no adapter NDR was opened because the surface did not change
 - `TestInvestAdapter` lives under `contracts/test/mocks/` and is not a production deploy target
-- `currentNAV` includes adapter assets; `harvestableYield` is 0 when NAV ≤ principal
+- `currentNAV` includes adapter assets; `harvestableYield` is 0 when NAV ≤ `requiredBacking`
 - `harvest()` is permissionless, non-reentrant, sends only surplus ETH to Reaper, and never decreases `protectedPrincipal`
-- loss-recovery-first holds on the test adapter
+- loss-recovery-first holds on the test adapter vs `requiredBacking`; impairment accounting is [`NIP-0012`](0012-impaired-strategy-capital.md)
 - donations / forced ETH do not mint and do not raise `protectedPrincipal`; they may become harvestable only as NAV surplus
 - strategy changes are scheduled on-chain, wait 14 days when replacing an active adapter (first adapter may execute immediately), execute only the scheduled adapter, and route recovered ETH Grave → new adapter, never to admin
 - pause is absent on Grave and Reaper; `startAuction` does not read a Grave pause flag

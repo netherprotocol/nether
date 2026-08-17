@@ -9,6 +9,7 @@
 - Prior slice: [`NIP-0002`](0002-landing-docs.md) (holder + docs)
 - Visual reference: attached **The SOL Grave** dashboard screenshot, with the Nether-specific exceptions in §4
 - No NDR in this slice
+- Impaired capital display: [`NIP-0012`](0012-impaired-strategy-capital.md) (Planned; [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md))
 
 This plan is the second public frontend slice: a live Grave / Reaper / NETH monitoring page on the existing Astro static site. It reads spec §12 views from Base Sepolia. It does **not** send `bury`, `sellToReaper`, or wallet transactions. Those stay stubs until [`NIP-0011`](0011-wallet-connect.md).
 
@@ -130,8 +131,11 @@ Left column (live):
 | Current era | `currentEra()` |
 | Era progress | `currentEraBuried / currentEraCapacity` as a percent bar |
 | ETH remaining in era | `currentEraCapacity - currentEraBuried` — **not** a wall-clock countdown. Nether eras fill by buried ETH (spec §5, §14). The screenshot’s “Era ends in 1d 04h” is SOL Grave time-era chrome and must not be copied. |
-| Harvestable yield | `harvestableYield()` |
-| Strategy NAV | `currentNAV()` (required by spec §14; add this row even though the screenshot omitted it) |
+| Harvestable yield | `harvestableYield()` (vs `requiredBacking` after [`NIP-0012`](0012-impaired-strategy-capital.md)) |
+| Required backing | `requiredBacking()` — harvest watermark; add when Grave exposes it |
+| Strategy NAV | `currentNAV()` (active capital only; spec §14; add this row even though the screenshot omitted it). Do not include impaired ETH. |
+| Impaired capital | `impairedCapital()`; not part of Strategy NAV |
+| Impaired adapters | list + `impairedOwed`; do not hide an adapter that still owes because its venue balance is 0 |
 | Active strategy | `activeStrategy()`, truncated, Basescan link |
 | Pending strategy | `pendingStrategy()`; if `adapter != 0`, show **Pending**, truncated address, and `Activates in {d h m}` from `executeAfter`. If none, omit the row. |
 | Grave contract | deployment JSON address, Basescan link |
@@ -274,6 +278,7 @@ Grave:
 - `currentEra`, `currentEraBuried`, `currentEraCapacity`, `currentRewardRate`
 - `quoteBury(uint256)`
 - `protectedPrincipal`, `currentNAV`, `harvestableYield`
+- `requiredBacking`, `impairedCapital`, impaired adapter list / owed (when [`NIP-0012`](0012-impaired-strategy-capital.md) is implemented)
 - `activeStrategy`, `pendingStrategy`
 
 NETH:
