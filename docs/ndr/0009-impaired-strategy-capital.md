@@ -27,13 +27,14 @@ This NDR does not reopen burial finality, the 14-day replacement delay, one acti
 - Do not silently abandon recoverable ETH on the first failed `withdrawETH`.
 - Still escape a malicious or bricked adapter that reverts withdraw forever (spec §16.1).
 - Prevent the owner from burning the retry budget in one block (migration-spam to force immediate impairment).
-- Keep a public, on-chain set of adapters that still hold impaired capital so crankers can retry recovery without a new 14-day schedule.
+- Keep a public, on-chain set of adapters that still **owe** impaired capital so crankers can retry recovery without a new 14-day schedule. An adapter is not forgotten because it currently holds no ETH.
 - `protectedPrincipal` never decreases; new `bury()` MUST NOT paper over an impairment.
 - Do not withhold future yield from remaining **active** capital in order to refill historical Grave size. Reaper stays funded on yield above the post-impairment watermark.
 - Ordinary losses on the **live** adapter remain loss-recovery-first (spec §6.3). Impairment is only the capital left behind in a former adapter after the retry budget is exhausted.
 - Recovered ETH is returning principal, not harvestable yield.
 - Do not send recovered or migrated ETH to `owner()`.
 - Do not add a second simultaneous investing adapter (spec §20). Recovery may pull from a listed former adapter into Grave, then into the single active adapter.
+- Crankers should be able to skip a useless `recoverImpaired` by simulating it first, without that skip being treated as repayment or as a reason to drop the adapter.
 
 ## Options
 
@@ -59,7 +60,7 @@ Keep the pending schedule. Each execute **attempts** to pull all recoverable ETH
 
 - If the pull fully succeeds, complete migration: deposit idle ETH into the scheduled adapter, clear pending, clear the failure counter.
 - If the pull fails and the failure count for this pending migration is still below `N`, **do not switch** `activeStrategy`. Commit a failed attempt, start a 1-day cooldown, emit a failure event. Pending remains.
-- If the pull fails and this attempt is the `N`th failure, complete migration anyway: switch to the scheduled adapter, add the old adapter to the impaired list, increase `impairedCapital` as specified below, deposit whatever ETH actually sits on Grave into the new adapter.
+- If the pull fails and this attempt is the `N`th failure, complete migration anyway: switch to the scheduled adapter, add the old adapter to the impaired list (or increase its existing owed amount), increase `impairedCapital` as specified below, deposit whatever ETH actually sits on Grave into the new adapter.
 
 `N = 3`. Cooldown between attempts is **1 day**. The first execute of a pending replacement still requires the spec §6.5 14-day delay (or immediate first activation per [`NDR-0008`](0008-initial-strategy-immediate.md) when none is active). After a recorded failure, a retry may run no sooner than `lastFailureTime + 1 day`; it does **not** restart the 14-day clock.
 
@@ -100,7 +101,7 @@ Option E is exactly the refill policy this record rejects: it would take years a
 | `STRATEGY_MIGRATION_WITHDRAW_FAILURE_LIMIT` (`N`) | `3` |
 | `STRATEGY_MIGRATION_RETRY_DELAY` | `1 days` |
 
-Cranker retry count, backoff, and “more complex” recovery tactics are **not** protocol rules. The protocol exposes an unbounded permissionless recover path; cranker policy lives in keeper/NIP work.
+Cranker retry count, backoff, and “more complex” recovery tactics are **not** protocol rules. The protocol exposes an unbounded permissionless recover path. Crankers MAY `eth_call` / simulate `recoverImpaired` before broadcasting so they do not spend gas on a revert or a 0-pay pull; the Grave keeper MUST do that, same as its existing simulate-before-send rule. Simulation does not repay debt and MUST NOT be treated as grounds to drop an adapter from the list.
 
 ### What counts as a failed pull
 
@@ -118,7 +119,7 @@ Do not treat a fabricated high `totalAssetsInETH` as proof of assets for **lower
 
 Keep `protectedPrincipal` as historical buried ETH. It only increases on successful `bury()` and never decreases.
 
-Add `impairedCapital`, initially 0. Define:
+Add `impairedCapital` (sum of unpaid impaired principal) and a per-adapter owed amount, both initially 0. Invariant: `impairedCapital == sum of owed[adapter]` over the impaired list. Define:
 
 ```text
 historicalBuried = protectedPrincipal
@@ -129,45 +130,59 @@ harvestable        = max(0, activeGraveCapital - requiredBacking - alreadyReserv
 
 `requiredBacking` is the harvest watermark. A harvest MUST NOT pull active backing below `requiredBacking`. It MAY complete while `currentNAV < protectedPrincipal` when `impairedCapital > 0`.
 
-**Live adapter losses** (no migration, or a migration that fully withdraws): `impairedCapital` unchanged. If `currentNAV < requiredBacking`, `harvestable = 0` until the live venue recovers. Spec §6.3 still applies to active capital.
+**Live adapter losses** (no migration, or a migration that fully withdraws): `impairedCapital` and per-adapter owed amounts unchanged. If `currentNAV < requiredBacking`, `harvestable = 0` until the live venue recovers. Spec §6.3 still applies to active capital.
 
 **On the impairing execute** (the `N`th failed pull), after any ETH received this tx is on Grave and before/when switching adapters:
 
 ```text
 observedActive   = address(this).balance   // plus any ETH already in the new adapter, which should be 0
-impairedCapital += max(0, requiredBacking - observedActive)
+delta            = max(0, requiredBacking - observedActive)
+impairedCapital += delta
+owed[old]       += delta
 ```
 
-That sets `requiredBacking` down to observed active capital at that instant, so harvestable is 0 immediately after impairment and **future** gains on remaining capital are harvestable. It cannot mint harvestable yield out of a lying old NAV.
+That sets `requiredBacking` down to observed active capital at that instant, so harvestable is 0 immediately after impairment and **future** gains on remaining capital are harvestable. It cannot mint harvestable yield out of a lying old NAV. If `old` is already on the list (impaired twice), add `delta` to the existing owed amount; do not reset it.
 
-**On `bury()`:** `protectedPrincipal += msg.value`. `impairedCapital` unchanged. Active capital rises by the buried ETH. Harvestable unchanged.
+**On `bury()`:** `protectedPrincipal += msg.value`. `impairedCapital` and all owed amounts unchanged. Active capital rises by the buried ETH. Harvestable unchanged.
 
-**On permissionless recovery** of `received` ETH (Grave balance delta, never the adapter’s return value alone):
+**On permissionless recovery** of `received` ETH from `adapter` (Grave balance delta, never the adapter’s return value alone):
 
 ```text
-impairedCapital -= min(received, impairedCapital)
+pay               = min(received, owed[adapter])
+owed[adapter]    -= pay
+impairedCapital  -= pay
 ```
 
-Active NAV rises by `received`. `requiredBacking` rises by the same amount. Recovered ETH is principal returning, not yield. Donations and forced ETH (spec §16.2) are unchanged: they are not burials and they do not reduce `impairedCapital`.
+Active NAV rises by `received`. `requiredBacking` rises by `pay`. Recovered ETH up to `owed[adapter]` is principal returning, not yield. Any `received` above `owed[adapter]` is unsolicited surplus (spec §16.2), not a reason to reduce another adapter’s debt. Donations and forced ETH to Grave are unchanged: they are not burials and they do not reduce `impairedCapital` or any owed amount.
 
-If `totalAssetsInETH` reverted for the whole attempt window, still list the adapter and still apply the `observedActive` formula above (the missing ETH is whatever `requiredBacking` exceeded). Under-counting impaired capital is acceptable; over-counting from a fabricated NAV is not.
+If `totalAssetsInETH` reverted for the whole attempt window, still list the adapter, still record `owed[old] += delta`, and still apply the `observedActive` formula above (the missing ETH is whatever `requiredBacking` exceeded). Under-counting impaired capital is acceptable; over-counting from a fabricated NAV is not.
 
 ### Impaired adapter list and recovery
 
-When capital is impaired, write the old adapter address into an on-chain list (append if not already present). The list is readable by crankers and anyone else.
+When `delta > 0` on an impairing execute, write the old adapter address into an on-chain list if it is not already present. The list is readable by crankers and anyone else. Membership means **this adapter still owes Grave**, not “this adapter currently holds ETH.”
+
+An adapter MUST remain on the list while `owed[adapter] > 0`. It MUST NOT be removed because:
+
+- `address(adapter).balance == 0`, WETH/aToken balances are 0, or any other external balance is 0;
+- `totalAssetsInETH()` returns 0 or reverts;
+- `recoverImpaired` reverts or pays 0;
+- a cranker simulation suggests a pull would be useless;
+- a later `bury()` or live-adapter profit increased active capital.
+
+A partial repay reduces `owed[adapter]` and `impairedCapital` by `pay` and **leaves the adapter on the list**. Remove it if and only if `owed[adapter]` becomes 0 after an actual ETH receipt credited to that adapter. Debt is not forgotten: a bricked adapter that never pays stays on the list with its owed amount indefinitely.
 
 Anyone MAY call a permissionless `recoverImpaired(adapter)` (final name is implementation) subject to:
 
-- `adapter` is on the impaired list;
+- `adapter` is on the impaired list (`owed[adapter] > 0`);
 - `nonReentrant`;
 - `withdrawETH` recipient is Grave only;
 - realized amount is the Grave balance delta;
 - then existing idle-deploy into the **current** `activeStrategy` (try/catch as on `bury()`: idle is allowed if deposit reverts);
 - no cooldown, no protocol-imposed retry limit, no owner-only gate.
 
-A reverting recover call MAY revert; the cranker retries. The protocol MUST NOT try/catch recover in a way that credits `impairedCapital` without ETH actually received.
+A reverting recover call MAY revert; the cranker retries. The protocol MUST NOT try/catch recover in a way that credits `owed` / `impairedCapital` without ETH actually received, and MUST NOT drop the adapter on a 0-pay or reverting recover.
 
-Leaving an address on the list after a 0-pay recover is allowed (append-friendly). A later NIP MAY drop an address from the enumerable view when a recover both receives 0 and cannot observe remaining assets; it MUST NOT treat that drop as reducing `impairedCapital`.
+Crankers MAY simulate `recoverImpaired` (`eth_call` / `simulateContract`) before sending, so a revert or 0-pay pull does not waste gas. The Grave keeper MUST simulate (and MUST NOT send when the simulation reverts or Grave’s ETH balance would not increase). A failed or 0-pay simulation does not change on-chain owed amounts and does not remove the adapter.
 
 There is still only one **active** investing adapter. Listed adapters are residual pull sources, not a second strategy.
 
@@ -178,6 +193,7 @@ There is still only one **active** investing adapter. Listed adapters are residu
 - It does not pay owner, buriers, or an arbitrary EOA.
 - It does not skip the 14-day delay when replacing a live adapter.
 - It does not change era math, NETH issuance, or Reaper auction parameters.
+- It does not drop an impaired adapter from the list while that adapter still owes ETH, including after a 0-pay recover or a zero venue balance.
 
 ## Consequences
 
@@ -190,7 +206,8 @@ There is still only one **active** investing adapter. Listed adapters are residu
   - impaired adapters and permissionless recovery exist.
 - Spec §22’s instruction that an implementation agent must not change protected-principal / yield-allocation rules still holds for **unilateral** edits. This NDR is the accepted change those sections must follow.
 - [`NIP-0007`](../nip/0007-aave-adapter.md) must stop saying migration continues best-effort on Aave `withdraw` revert. Harvest may still revert on insufficient Aave liquidity (unchanged).
-- [`NIP-0009`](../nip/0009-grave-keeper.md): crankers SHOULD read the impaired list and call recover with whatever off-chain backoff they choose. That policy is not frozen here. Keeper still does not `executeStrategyMigration` (owner).
-- Dashboard/views: expose `impairedCapital`, the impaired adapter list, and harvestable using `requiredBacking`. Do not display impaired ETH as active Grave capital.
-- Follow-up work: spec + NIP edits, then Grave storage/ABI (`impairedCapital`, list, failure/cooldown slots, recover function, events), tests (unit, fuzz, invariant, fork), keeper recover path. No contract changes in the change that only adds this NDR.
-- What would trigger a superseding NDR: changing `N` or the 1-day cooldown; Solidity-reverting failed attempts so `N` cannot be counted; restoring Option E/F/G yield skimming; dropping the impaired list or making recover owner-only; using old-adapter reported NAV to lower `requiredBacking`; sending recovered ETH anywhere except Grave → active adapter (or idle on Grave if deposit fails).
+- [`NIP-0009`](../nip/0009-grave-keeper.md): crankers SHOULD read the impaired list and MAY recover with whatever off-chain backoff they choose. Before a paid `recoverImpaired`, they MAY simulate; the shipped keeper MUST simulate and MUST NOT send a revert or 0-pay recover. Retry policy is not otherwise frozen here. Keeper still does not `executeStrategyMigration` (owner).
+- Dashboard/views: expose `impairedCapital`, per-adapter `owed`, the impaired adapter list, and harvestable using `requiredBacking`. Do not display impaired ETH as active Grave capital. Do not hide an adapter that still owes because its venue balance is 0.
+- Follow-up work: spec + NIP edits, then Grave storage/ABI (`impairedCapital`, per-adapter owed, list, failure/cooldown slots, recover function, events), tests (unit, fuzz, invariant, fork), keeper recover path with simulation. No contract changes in the change that only adds this NDR.
+- Tests MUST keep an adapter on the list through 0-pay recovers, reverting recovers, and partial repays, and MUST remove it only when that adapter’s owed amount reaches 0 from credited ETH.
+- What would trigger a superseding NDR: changing `N` or the 1-day cooldown; Solidity-reverting failed attempts so `N` cannot be counted; restoring Option E/F/G yield skimming; dropping the impaired list, making recover owner-only, or removing an adapter while `owed[adapter] > 0`; using old-adapter reported NAV or a zero venue balance to lower `requiredBacking` or to treat the debt as repaid; sending recovered ETH anywhere except Grave → active adapter (or idle on Grave if deposit fails).
