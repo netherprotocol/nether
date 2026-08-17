@@ -23,8 +23,8 @@ function resolveGithubRepo(): string {
 process.env.PUBLIC_GITHUB_REPO = resolveGithubRepo();
 
 export default defineConfig({
-  site: 'https://rastsislaux.github.io',
-  base: '/nether/',
+  site: 'https://netherprotocol.xyz',
+  base: '/',
   output: 'static',
   trailingSlash: 'never',
   integrations: [react(), sitemap()],

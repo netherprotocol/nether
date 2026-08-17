@@ -1,7 +1,8 @@
 export const SITE_TITLE = 'Nether';
 export const SITE_DESCRIPTION =
   'Permanently capitalized monetary protocol on Base. Bury ETH in the Grave, mint NETH. Yield funds the Reaper, which buys and burns NETH.';
-export const SITE_BASE = '/nether/';
+export const SITE_ORIGIN = 'https://netherprotocol.xyz';
+export const SITE_BASE = '/';
 export const HOLDER_KICKER = 'Bury ETH forever';
 export const HOLDER_COPY =
   'Bury ETH forever. Mint $NETH. When the Grave earns, the Reaper buys and burns — no redemption, no peg, no promises.';

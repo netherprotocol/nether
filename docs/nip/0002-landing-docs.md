@@ -167,14 +167,14 @@ Minimum:
 
 Host: GitHub Pages via Actions, `apps/web` as the Astro project path (`withastro/action` `path: apps/web`). Default branch for this repo is `master`. Deploy runs on push to `master` and on `workflow_dispatch` from `master`. Pull requests build and upload the Pages artifact but do not publish.
 
-Until a custom domain exists:
+Custom domain `netherprotocol.xyz` is live; `site` and `base` are config, not a new NDR ([`NDR-0003`](../ndr/0003-frontend-stack.md)):
 
 ```js
-site: 'https://rastsislaux.github.io',
-base: '/nether/',
+site: 'https://netherprotocol.xyz',
+base: '/',
 ```
 
-Internal links must respect `base` (Astro `<a href={import.meta.env.BASE_URL + 'docs/'}>` or equivalent). A later custom domain drops `base` and updates `site`; that is config, not a new NDR.
+Internal links must respect `base` (Astro `<a href={import.meta.env.BASE_URL + 'docs/'}>` or equivalent).
 
 ## 8. Tree
 

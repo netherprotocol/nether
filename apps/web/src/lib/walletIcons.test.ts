@@ -12,8 +12,8 @@ describe('featured wallet icons', () => {
     for (const file of Object.values(FEATURED_ICON_FILES)) {
       assert.equal(existsSync(join(publicDir, file)), true, file);
     }
-    assert.equal(featuredWalletIcon('metamask'), '/nether/wallets/metamask.svg');
-    assert.equal(featuredWalletIcon('coinbase'), '/nether/wallets/coinbase.svg');
-    assert.equal(featuredWalletIcon('trust'), '/nether/wallets/trust.png');
+    assert.equal(featuredWalletIcon('metamask'), '/wallets/metamask.svg');
+    assert.equal(featuredWalletIcon('coinbase'), '/wallets/coinbase.svg');
+    assert.equal(featuredWalletIcon('trust'), '/wallets/trust.png');
   });
 });

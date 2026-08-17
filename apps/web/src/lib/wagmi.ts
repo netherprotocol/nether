@@ -4,6 +4,7 @@ import { base, baseSepolia } from 'wagmi/chains';
 import { coinbaseWallet, injected, metaMask, walletConnect } from 'wagmi/connectors';
 import { walletConnectProjectId } from './connectors.ts';
 import { nethMarkUrl } from './nethMark.ts';
+import { SITE_BASE, SITE_ORIGIN } from './site.ts';
 
 function envString(key: string): string | undefined {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
@@ -12,9 +13,9 @@ function envString(key: string): string | undefined {
 }
 
 export function pagesOrigin(): string {
-  const originRaw = envString('SITE') ?? 'https://rastsislaux.github.io';
+  const originRaw = envString('SITE') ?? SITE_ORIGIN;
   const origin = originRaw.endsWith('/') ? originRaw : `${originRaw}/`;
-  const baseRaw = envString('BASE_URL') ?? '/nether/';
+  const baseRaw = envString('BASE_URL') ?? SITE_BASE;
   const base = baseRaw.endsWith('/') ? baseRaw : `${baseRaw}/`;
   return new URL(base, origin).href;
 }
@@ -24,7 +25,7 @@ export function appOrigin(): string {
     const origin = window.location.origin.endsWith('/')
       ? window.location.origin
       : `${window.location.origin}/`;
-    const baseRaw = envString('BASE_URL') ?? '/nether/';
+    const baseRaw = envString('BASE_URL') ?? SITE_BASE;
     const base = baseRaw.endsWith('/') ? baseRaw : `${baseRaw}/`;
     return new URL(base, origin).href;
   }

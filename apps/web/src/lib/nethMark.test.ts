@@ -11,10 +11,10 @@ const publicSvg = readFileSync(
 );
 
 describe('neth mark', () => {
-  it('publishes the supplied path at a stable Pages URL', () => {
+  it('publishes the supplied path at a stable site URL', () => {
     assert.ok(publicSvg.includes(NETH_MARK_PATH));
     assert.ok(publicSvg.includes(`viewBox="${NETH_MARK_VIEWBOX}"`));
     assert.ok(publicSvg.includes('fill="#000000"'));
-    assert.equal(nethMarkUrl(), 'https://rastsislaux.github.io/nether/neth.svg');
+    assert.equal(nethMarkUrl(), 'https://netherprotocol.xyz/neth.svg');
   });
 });
