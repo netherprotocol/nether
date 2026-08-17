@@ -57,7 +57,8 @@ export const RISK_WARNING_DETAILS = [
 ] as const;
 
 function githubRepoUrl(): string {
-  const fromEnv = import.meta.env.PUBLIC_GITHUB_REPO;
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const fromEnv = env?.PUBLIC_GITHUB_REPO;
   if (typeof fromEnv === 'string' && fromEnv.trim()) {
     return fromEnv.trim().replace(/\/+$/, '');
   }
@@ -65,7 +66,8 @@ function githubRepoUrl(): string {
 }
 
 export function withBase(pathname = ''): string {
-  const base = import.meta.env.BASE_URL || SITE_BASE;
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const base = (typeof env?.BASE_URL === 'string' && env.BASE_URL) || SITE_BASE;
   const prefix = base.endsWith('/') ? base : `${base}/`;
   const trimmed = pathname.replace(/^\/+/, '').replace(/\/+$/, '');
   if (!trimmed) {
