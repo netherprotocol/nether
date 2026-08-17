@@ -19,7 +19,7 @@ import { NetworkGuide } from './NetworkGuide.tsx';
 import { TokenGuide } from './TokenGuide.tsx';
 import { addChainExplicit, addNethToken, eip1193From } from './provider.ts';
 
-export function ConnectButton() {
+export function ConnectButton({ variant = 'header' }: { variant?: 'header' | 'dock' }) {
   const [networkId, setNetworkId] = useState<NetworkId>(firstEnabledNetworkId);
   const [connectOpen, setConnectOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -121,11 +121,21 @@ export function ConnectButton() {
         <button
           type="button"
           onClick={() => setConnectOpen(true)}
-          className="inline-flex items-center gap-1.5 bg-accent px-2.5 py-1.5 text-[0.62rem] tracking-[0.14em] text-white uppercase md:px-3 md:text-[0.68rem]"
+          className={
+            variant === 'dock'
+              ? 'inline-flex w-full items-center justify-center gap-2 bg-accent px-3 py-2.5 text-[0.62rem] tracking-[0.16em] text-white uppercase'
+              : 'inline-flex items-center gap-1.5 bg-accent px-2.5 py-1.5 text-[0.62rem] tracking-[0.14em] text-white uppercase md:px-3 md:text-[0.68rem]'
+          }
         >
           <Wallet className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
-          <span className="hidden sm:inline">Connect wallet</span>
-          <span className="sm:hidden">Connect</span>
+          {variant === 'dock' ? (
+            'Connect wallet'
+          ) : (
+            <>
+              <span className="hidden sm:inline">Connect wallet</span>
+              <span className="sm:hidden">Connect</span>
+            </>
+          )}
         </button>
         {connectOpen ? <ConnectModal onClose={() => setConnectOpen(false)} /> : null}
       </>
@@ -139,17 +149,19 @@ export function ConnectButton() {
         onClick={() => setMenuOpen((open) => !open)}
         aria-expanded={menuOpen}
         className={[
-          'inline-flex items-center gap-2 border px-2.5 py-1.5 text-[0.68rem] tracking-[0.04em] md:px-3',
+          variant === 'dock'
+            ? 'inline-flex w-full items-center justify-center gap-2 border px-2.5 py-2.5 text-[0.62rem] tracking-[0.04em]'
+            : 'inline-flex items-center gap-2 border px-2.5 py-1.5 text-[0.68rem] tracking-[0.04em] md:px-3',
           onChain ? 'border-white/10 text-white' : 'border-accent/60 text-accent',
         ].join(' ')}
       >
         <span className="font-mono">{truncateAddress(address)}</span>
         {onChain ? (
-          <span className="text-white">
+          <span className={variant === 'dock' ? 'truncate text-white' : 'text-white'}>
             {nethBalance != null ? `${formatWei(nethBalance, 4)} $NETH` : '…'}
           </span>
         ) : null}
-        {onChain && balance ? (
+        {onChain && balance && variant !== 'dock' ? (
           <span className="hidden text-muted md:inline">{formatWei(balance.value, 4)} ETH</span>
         ) : null}
       </button>
@@ -159,6 +171,7 @@ export function ConnectButton() {
           network={network}
           showAddNetwork={showAddNetwork}
           showAddNeth={showAddNeth}
+          placement={variant === 'dock' ? 'top' : 'bottom'}
           onAddNetwork={() => {
             void handleAddNetwork();
           }}

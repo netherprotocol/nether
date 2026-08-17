@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink, Settings } from 'lucide-react';
 import { NethMark } from '../NethMark.tsx';
 import { explorerAddressUrl, explorerTxUrl, type NetworkConfig } from '../../lib/networks.ts';
-import { truncateAddress } from '../../lib/format.ts';
+import { formatAmountInput, truncateAddress } from '../../lib/format.ts';
 import { percentToBps } from '../../lib/slippage.ts';
 
 export function Tip({
@@ -15,8 +15,18 @@ export function Tip({
   children: ReactNode;
   block?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <span className={block ? 'dash-tip dash-tip-block' : 'dash-tip'}>
+    <span
+      className={[block ? 'dash-tip dash-tip-block' : 'dash-tip', open ? 'dash-tip-open' : '']
+        .filter(Boolean)
+        .join(' ')}
+      tabIndex={0}
+      onClick={(event) => {
+        event.stopPropagation();
+        setOpen((value) => !value);
+      }}
+    >
       {children}
       <span role="tooltip" className="dash-tip-box">
         {text}
@@ -35,15 +45,42 @@ export function AddressLink({
   label?: string;
 }) {
   return (
-    <a
-      className="inline-flex items-center gap-1.5 text-paper hover:text-white"
-      href={explorerAddressUrl(network, address)}
-      rel="noopener noreferrer"
-      target="_blank"
+    <span className="inline-flex items-center gap-1.5">
+      <a
+        className="inline-flex items-center gap-1.5 text-paper hover:text-white"
+        href={explorerAddressUrl(network, address)}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <span className="font-mono text-sm">{label ?? truncateAddress(address)}</span>
+        <ExternalLink className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} aria-hidden="true" />
+      </a>
+      <CopyButton value={address} className="md:hidden" />
+    </span>
+  );
+}
+
+export function CopyButton({ value, className = '' }: { value: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className={['p-0.5 text-accent hover:text-white', className].filter(Boolean).join(' ')}
+      aria-label={copied ? 'Copied' : 'Copy'}
+      onClick={async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        } catch {
+          setCopied(false);
+        }
+      }}
     >
-      <span className="font-mono text-sm">{label ?? truncateAddress(address)}</span>
-      <ExternalLink className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} aria-hidden="true" />
-    </a>
+      <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+    </button>
   );
 }
 
@@ -87,6 +124,45 @@ export function StatusDot({ active }: { active: boolean }) {
       className={active ? 'h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'h-2 w-2 rounded-full bg-white/30'}
       aria-hidden="true"
     />
+  );
+}
+
+export function AmountPercents({
+  max,
+  disabled,
+  onSelect,
+  onSettings,
+}: {
+  max: bigint;
+  disabled?: boolean;
+  onSelect: (value: string) => void;
+  onSettings?: () => void;
+}) {
+  const presets = [25, 50, 75, 100] as const;
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      {presets.map((pct) => (
+        <button
+          key={pct}
+          type="button"
+          disabled={disabled || max <= 0n}
+          onClick={() => onSelect(formatAmountInput((max * BigInt(pct)) / 100n))}
+          className="flex-1 border border-white/10 py-1.5 text-[0.62rem] tracking-[0.12em] text-muted uppercase disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {pct === 100 ? 'Max' : `${pct}%`}
+        </button>
+      ))}
+      {onSettings ? (
+        <button
+          type="button"
+          onClick={onSettings}
+          className="shrink-0 p-1.5 text-muted hover:text-white"
+          aria-label="Slippage settings"
+        >
+          <Settings className="h-4 w-4" strokeWidth={1.5} />
+        </button>
+      ) : null}
+    </div>
   );
 }
 

@@ -11,8 +11,12 @@ import { isUserRejected, revertShortMessage } from '../../lib/errors.ts';
 import { useLiveSnapshot } from '../useLiveSnapshot.ts';
 import { WalletProviders } from '../wallet/WalletProviders.tsx';
 import { WrongNetworkBanner } from '../wallet/WrongNetworkBanner.tsx';
+import { BuryForm } from './BuryForm.tsx';
 import { GravePanel } from './GravePanel.tsx';
+import { MobileDock } from './MobileDock.tsx';
+import { MobileSwapCard } from './MobileSwapCard.tsx';
 import { NethBar } from './NethBar.tsx';
+import { ReaperActions } from './ReaperActions.tsx';
 import { ReaperPanel } from './ReaperPanel.tsx';
 import { RpcDown } from './RpcDown.tsx';
 import { TopStats } from './TopStats.tsx';
@@ -257,12 +261,13 @@ function DashboardBody() {
     return (
       <div className="px-5 py-10 md:px-10 md:py-14">
         <RpcDown network={network} contracts={contracts} onRetry={retry} />
+        <MobileDock />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-5 py-6 md:px-10 md:py-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 pt-3 pb-28 md:gap-4 md:px-10 md:py-8 md:pb-8">
       {phase === 'read-error' || (phase === 'rpc-down' && snapshot) ? (
         <p
           className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-paper"
@@ -284,6 +289,51 @@ function DashboardBody() {
       ) : null}
       <WrongNetworkBanner network={network} />
       <TopStats snapshot={snapshot} />
+      <MobileSwapCard
+        snapshot={snapshot}
+        network={network}
+        contracts={contracts}
+        bury={
+          <BuryForm
+            snapshot={snapshot}
+            network={network}
+            buryInput={buryInput}
+            buryQuote={buryQuote}
+            onBuryInput={setBuryInput}
+            connected={isConnected}
+            onChain={onChain}
+            ethBalance={ethBalance}
+            gasReserve={gasReserve}
+            pending={pending}
+            error={lastAction === 'bury' ? txError : null}
+            hash={lastAction === 'bury' ? txHash : null}
+            onBury={onBury}
+            layout="mobile"
+          />
+        }
+        sell={
+          <ReaperActions
+            snapshot={snapshot}
+            network={network}
+            sellInput={sellInput}
+            sellQuote={sellQuote}
+            onSellInput={setSellInput}
+            connected={isConnected}
+            onChain={onChain}
+            nethBalance={nethBalance}
+            nethAllowance={nethAllowance}
+            pending={pending}
+            error={txError}
+            hash={txHash}
+            lastAction={lastAction}
+            onApprove={onApprove}
+            onSell={onSell}
+            onStart={onStart}
+            onFinalize={onFinalize}
+            layout="mobile"
+          />
+        }
+      />
       <GravePanel
         snapshot={snapshot}
         network={network}
@@ -328,6 +378,7 @@ function DashboardBody() {
         onChain={onChain}
         nethBalance={nethBalance}
       />
+      <MobileDock />
     </div>
   );
 }

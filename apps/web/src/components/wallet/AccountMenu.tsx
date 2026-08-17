@@ -13,6 +13,7 @@ export function AccountMenu({
   onAddNetwork,
   onAddNeth,
   onClose,
+  placement = 'bottom',
 }: {
   address: Address;
   network: NetworkConfig;
@@ -21,6 +22,7 @@ export function AccountMenu({
   onAddNetwork: () => void;
   onAddNeth: () => void;
   onClose: () => void;
+  placement?: 'bottom' | 'top';
 }) {
   const { disconnect } = useDisconnect();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,11 @@ export function AccountMenu({
   return (
     <div
       ref={rootRef}
-      className="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-white/10 bg-[#141414] py-1 shadow-xl"
+      className={
+        placement === 'top'
+          ? 'absolute right-0 bottom-full z-40 mb-2 w-64 rounded-lg border border-white/10 bg-[#141414] py-1 shadow-xl'
+          : 'absolute right-0 z-40 mt-2 w-64 rounded-lg border border-white/10 bg-[#141414] py-1 shadow-xl'
+      }
       role="menu"
     >
       <button

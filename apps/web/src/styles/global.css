@@ -79,6 +79,18 @@ body {
   opacity: 1;
 }
 
+@media (hover: none) {
+  .dash-tip:hover .dash-tip-box,
+  .dash-tip:focus-within .dash-tip-box {
+    opacity: 0;
+  }
+
+  .dash-tip-open .dash-tip-box {
+    opacity: 1;
+    pointer-events: none;
+  }
+}
+
 .risk-warning {
   position: relative;
   display: inline-block;

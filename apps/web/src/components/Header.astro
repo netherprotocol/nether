@@ -1,6 +1,7 @@
 ---
 import { GITHUB_REPO_URL, withBase } from '../lib/site';
 import { HeaderActions } from './HeaderActions.tsx';
+import { MobileChrome } from './MobileChrome.tsx';
 
 const homeHref = withBase();
 const graveHref = withBase('grave');
@@ -18,9 +19,9 @@ function tabClass(active: boolean): string {
 }
 ---
 
-<header class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-3 md:px-10 md:py-3.5">
+<header class="relative z-50 grid shrink-0 grid-cols-[1fr_auto] items-center gap-3 bg-black px-5 py-3 md:grid-cols-[1fr_auto_1fr] md:bg-transparent md:px-10 md:py-3.5">
   <a href={homeHref} class="font-display text-xl text-white md:text-2xl">Nether</a>
-  <nav class="flex items-center gap-6 justify-self-center" aria-label="Primary">
+  <nav class="hidden items-center gap-6 justify-self-center md:flex" aria-label="Primary">
     <a href={graveHref} class={tabClass(onGrave)} aria-current={onGrave ? 'page' : undefined}>
       Grave
     </a>
@@ -36,7 +37,18 @@ function tabClass(active: boolean): string {
       Source
     </a>
   </nav>
-  <div class="justify-self-end">
+  <div class="hidden justify-self-end md:block">
     <HeaderActions client:load />
+  </div>
+  <div class="justify-self-end md:hidden">
+    <MobileChrome
+      client:load
+      graveHref={graveHref}
+      docsHref={docsHref}
+      sourceHref={GITHUB_REPO_URL}
+      onGrave={onGrave}
+      onDocs={onDocs}
+      showConnect={!onGrave}
+    />
   </div>
 </header>
