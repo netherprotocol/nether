@@ -28,7 +28,7 @@ Unblock [`NIP-0011`](0011-wallet-connect.md) (wallet / bury / sell) on the same 
 
 In scope:
 
-- New route `/grave` (with `base: /nether/` → `/nether/grave`)
+- New route `/grave`
 - Unlock **Enter the Grave** on the holder hero so it navigates to `/grave`; header uses a Grave tab plus the network switch
 - Client island that reads spec §12 views (plus a few supporting getters already on the contracts) via `viem`
 - Screenshot layout: top stats, GRAVE, REAPER, $NETH — **without** the `1.` / `2.` / `3.` prefixes

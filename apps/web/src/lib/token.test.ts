@@ -14,7 +14,7 @@ describe('wallet_watchAsset params', () => {
     assert.equal(params.options.symbol, 'NETH');
     assert.equal(params.options.decimals, 18);
     assert.equal(params.options.image, nethMarkUrl());
-    assert.equal(params.options.image, 'https://rastsislaux.github.io/nether/neth.svg');
+    assert.equal(params.options.image, 'https://netherprotocol.xyz/neth.svg');
   });
 
   it('names the selected network in the manual guide', () => {

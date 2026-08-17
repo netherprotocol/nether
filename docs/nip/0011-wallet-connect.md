@@ -125,8 +125,8 @@ WalletConnect v2 requires a **project ID** from [Reown Cloud](https://cloud.reow
 - Read `import.meta.env.PUBLIC_WALLETCONNECT_PROJECT_ID`
 - If unset: hide the Other wallet row, keep injected / featured extension connectors; do not show a vendor-specific “WalletConnect is unconfigured” note
 - GitHub Pages build: pass the value into `.github/workflows/web.yml` from a repository **variable** (not a secret-that-looks-private)
-- In Reown Cloud, allow origin `https://rastsislaux.github.io` (and localhost for `astro dev`)
-- Metadata: name `Nether`, url the Pages origin + `base: '/nether/'`, icons `[nethMarkUrl()]` (`public/neth.svg`)
+- In Reown Cloud, allow origin `https://netherprotocol.xyz` (and localhost for `astro dev`)
+- Metadata: name `Nether`, url the site origin (`https://netherprotocol.xyz/`), icons `[nethMarkUrl()]` (`public/neth.svg`)
 
 Do not block Sepolia bury on a missing project ID if MetaMask / Coinbase / Trust **extensions** or in-app browsers still connect.
 
@@ -198,7 +198,7 @@ Do not send `bury` / `approve` / `sellToReaper` / `startAuction` while chain ids
 
 $NETH is a standard ERC-20 (spec §4.1): name `Nether`, symbol `NETH`, 18 decimals. Address comes from the selected network’s deployment JSON (`contracts.neth`). Do not hardcode a second address book.
 
-The token mark is already in the tree: `apps/web/public/neth.svg` (user-supplied, black fill) and `NethMark` for in-app `currentColor` use. Dashboard diamonds (`Gem`) were replaced by that component. Wallet integrations use the public SVG URL from `nethMarkUrl()` (`https://rastsislaux.github.io/nether/neth.svg` on Pages).
+The token mark is already in the tree: `apps/web/public/neth.svg` (user-supplied, black fill) and `NethMark` for in-app `currentColor` use. Dashboard diamonds (`Gem`) were replaced by that component. Wallet integrations use the public SVG URL from `nethMarkUrl()` (`https://netherprotocol.xyz/neth.svg`).
 
 ### 6.1 Native `wallet_watchAsset`
 

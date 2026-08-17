@@ -1,7 +1,8 @@
 export const SITE_TITLE = 'Nether';
 export const SITE_DESCRIPTION =
   'Permanently capitalized monetary protocol on Base. Bury ETH in the Grave, mint NETH. Yield funds the Reaper, which buys and burns NETH.';
-export const SITE_BASE = '/nether/';
+export const SITE_ORIGIN = 'https://netherprotocol.xyz';
+export const SITE_BASE = '/';
 export const HOLDER_KICKER = 'Bury ETH forever';
 export const HOLDER_COPY =
   'Bury ETH forever. Mint $NETH. When the Grave earns, the Reaper buys and burns — no redemption, no peg, no promises.';
@@ -56,7 +57,8 @@ export const RISK_WARNING_DETAILS = [
 ] as const;
 
 function githubRepoUrl(): string {
-  const fromEnv = import.meta.env.PUBLIC_GITHUB_REPO;
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const fromEnv = env?.PUBLIC_GITHUB_REPO;
   if (typeof fromEnv === 'string' && fromEnv.trim()) {
     return fromEnv.trim().replace(/\/+$/, '');
   }
@@ -64,7 +66,8 @@ function githubRepoUrl(): string {
 }
 
 export function withBase(pathname = ''): string {
-  const base = import.meta.env.BASE_URL || SITE_BASE;
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  const base = (typeof env?.BASE_URL === 'string' && env.BASE_URL) || SITE_BASE;
   const prefix = base.endsWith('/') ? base : `${base}/`;
   const trimmed = pathname.replace(/^\/+/, '').replace(/\/+$/, '');
   if (!trimmed) {
