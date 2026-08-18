@@ -225,17 +225,21 @@ export function ActionFeedback({
   error,
   hash,
   network,
+  pendingLabel,
+  confirmedLabel,
 }: {
   pending: string | null;
   error: string | null;
   hash: string | null;
   network: NetworkConfig;
+  pendingLabel?: string;
+  confirmedLabel?: string;
 }) {
   if (error) {
     return <p className="mt-2 text-sm text-accent">{error}</p>;
   }
   if (pending) {
-    return <p className="mt-2 text-sm text-muted">Confirm in wallet…</p>;
+    return <p className="mt-2 text-sm text-muted">{pendingLabel ?? 'Confirm in wallet…'}</p>;
   }
   if (hash) {
     return (
@@ -246,7 +250,7 @@ export function ActionFeedback({
           rel="noopener noreferrer"
           target="_blank"
         >
-          Transaction confirmed
+          {confirmedLabel ?? 'Transaction confirmed'}
           <ExternalLink className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} />
         </a>
       </p>

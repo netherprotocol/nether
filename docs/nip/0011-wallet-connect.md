@@ -293,7 +293,10 @@ Unlock **SELL NETH** when: connected, correct chain, auction active and not expi
 
 Partial fills are protocol behavior (spec §8.5): unused NETH stays with the seller. The quote already reflects remaining auction ETH. Show estimated ETH out and the spec warning that waiting may improve the rate but others can consume the budget.
 
-Two-step approve + sell is expected. Do not hide the approve transaction.
+Two-step approve + sell is expected. Do not hide the approve transaction. The Reaper pane must label the steps separately so the first wallet confirm is not mistaken for a sale:
+
+1. While `allowance < nethIn`, the primary control is **Allow Reaper to use $NETH**, with copy that this lets the Reaper use the exact sell amount and is not the sale.
+2. After that allowance confirms, copy must say the Reaper can use that amount and the user still needs to confirm **Sell NETH**. Do not show a generic “Transaction confirmed” after approve as if the sale completed.
 
 ### 7.5 Start auction (and finalize)
 
@@ -396,7 +399,7 @@ This slice is done when:
 - Other EIP-6963 wallets appear without a code change; **Other wallet** is the catch-all when a project ID is configured
 - ETH and $NETH balances show for the connected account on the correct chain ($NETH on the account chip and $NETH bar; ETH optional on the chip)
 - **BURY ETH** sends `bury(minNethOut)` with the spec warning visible before the wallet prompt
-- **SELL NETH** approves exact NETH then `sellToReaper`; inactive/expired auctions cannot sell
+- **SELL NETH** is two labeled steps (allow Reaper to use exact $NETH, then sell); inactive/expired auctions cannot sell
 - When idle Reaper ETH exists, a connected user can **start** an auction; when an auction is expired they can **finalize** first
 - On Base Sepolia, the account menu offers **Add Base Sepolia** when the chain is not already selected / added on this origin; wallets that implement EIP-3085 get a native prompt; others get RPC URLs, chain id `84532` / `0x14a34`, explorer, and currency
 - The account menu offers **Add $NETH** for the selected network’s token address until the user has pressed it on this origin; native `wallet_watchAsset` (including `image: nethMarkUrl()`) on supported wallets; manual contract / symbol / decimals guide otherwise

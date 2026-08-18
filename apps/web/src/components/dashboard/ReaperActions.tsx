@@ -9,6 +9,13 @@ import {
 } from '../../lib/format.ts';
 import type { NetworkConfig } from '../../lib/networks.ts';
 import type { ProtocolSnapshot } from '../../lib/protocol.ts';
+import {
+  REAPER_ALLOWANCE_CONFIRMED,
+  REAPER_ALLOWANCE_PENDING,
+  REAPER_SALE_CONFIRMED,
+  REAPER_SALE_PENDING,
+  reaperSellStepCopy,
+} from '../../lib/reaperSell.ts';
 import { DEFAULT_SLIPPAGE_BPS, minOutFromQuote } from '../../lib/slippage.ts';
 import { accentButtonClass } from '../wallet/ui.tsx';
 import { ActionFeedback, AmountPercents, SlippageControl, TokenChip } from './ui.tsx';
@@ -64,6 +71,11 @@ export function ReaperActions({
   const minEthOut = sellQuote != null ? minOutFromQuote(sellQuote, slippageBps) : 0n;
   const showNeth = connected && onChain && nethBalance != null;
   const needsApprove = nethAllowance != null && amount > 0n && nethAllowance < amount;
+  const justApproved = lastAction === 'approve' && !needsApprove && amount > 0n;
+  const sellCopy =
+    amount > 0n && nethAllowance != null
+      ? reaperSellStepCopy(needsApprove, amount, justApproved)
+      : null;
   const canSell =
     connected &&
     onChain &&
@@ -151,10 +163,20 @@ export function ReaperActions({
         )}
         {mobile && slippageOpen ? <SlippageControl bps={slippageBps} onChange={setSlippageBps} /> : null}
         {mobile ? null : <SlippageControl bps={slippageBps} onChange={setSlippageBps} />}
+        {sellCopy ? (
+          <div id={`reaper-sell-steps-${layout}`} className="mt-4 space-y-1 text-xs leading-relaxed">
+            <p className={needsApprove ? 'text-paper' : 'text-muted'}>{sellCopy.stepOne}</p>
+            <p className={!needsApprove ? 'text-paper' : 'text-muted'}>{sellCopy.stepTwo}</p>
+          </div>
+        ) : null}
         <button
           type="button"
           disabled={!canSell}
-          className={accentButtonClass(!canSell, 'mt-4')}
+          className={accentButtonClass(
+            !canSell,
+            [sellCopy ? 'mt-3' : 'mt-4', needsApprove ? 'tracking-[0.12em]' : ''].join(' '),
+          )}
+          aria-describedby={sellCopy ? `reaper-sell-steps-${layout}` : undefined}
           onClick={() => {
             if (needsApprove) {
               void onApprove(amount);
@@ -163,13 +185,8 @@ export function ReaperActions({
             }
           }}
         >
-          {needsApprove ? 'Approve NETH' : 'Sell NETH'}
+          {sellCopy?.button ?? 'Sell NETH'}
         </button>
-        {needsApprove ? (
-          <p className="mt-2 text-xs text-muted">
-            Exact NETH allowance for this sale. Approve is a separate transaction.
-          </p>
-        ) : null}
         {mobile ? (
           <p className="mt-3 text-[0.72rem] leading-relaxed text-muted">
             Waiting may improve the rate, but others can consume the budget. Unused NETH stays with
@@ -181,6 +198,20 @@ export function ReaperActions({
           error={reaperFeedback ? error : null}
           hash={reaperFeedback ? hash : null}
           network={network}
+          pendingLabel={
+            pending === 'approve'
+              ? REAPER_ALLOWANCE_PENDING
+              : pending === 'sell'
+                ? REAPER_SALE_PENDING
+                : undefined
+          }
+          confirmedLabel={
+            lastAction === 'approve'
+              ? REAPER_ALLOWANCE_CONFIRMED
+              : lastAction === 'sell'
+                ? REAPER_SALE_CONFIRMED
+                : undefined
+          }
         />
       </div>
     );
