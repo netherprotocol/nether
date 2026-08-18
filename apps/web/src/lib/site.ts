@@ -7,7 +7,7 @@ export const HOLDER_KICKER = 'Bury ETH forever';
 export const HOLDER_COPY =
   'Bury ETH forever. Mint $NETH. When the Grave earns, the Reaper buys and burns — no redemption, no peg, no promises.';
 export const PRIMARY_CTA = 'Enter the Grave';
-export const SECONDARY_CTA = 'Documentation';
+export const SECONDARY_CTA = 'Learn';
 
 export const FEATURES = [
   {

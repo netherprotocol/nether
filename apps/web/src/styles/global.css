@@ -274,3 +274,278 @@ body {
 .doc-body li {
   margin: 0.25rem 0;
 }
+
+.learn-page {
+  width: 100%;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 4.5rem;
+}
+
+@media (min-width: 768px) {
+  .learn-page {
+    padding: 0 2.5rem 5.5rem;
+  }
+}
+
+.learn-section {
+  padding-top: 3.25rem;
+}
+
+.learn-hero {
+  padding-top: 2.25rem;
+}
+
+.learn-kicker {
+  margin-bottom: 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.learn-heading {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+@media (min-width: 768px) {
+  .learn-heading {
+    font-size: 2.35rem;
+  }
+}
+
+.learn-prose {
+  max-width: 40rem;
+  margin-top: 1.15rem;
+}
+
+.learn-prose p + p,
+.learn-prose ul + p,
+.learn-prose p + ul {
+  margin-top: 0.85rem;
+}
+
+.learn-prose p,
+.learn-prose li {
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--color-paper);
+}
+
+.learn-prose a,
+.learn-faq-panel a {
+  color: #d4a89a;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.learn-prose a:hover,
+.learn-faq-panel a:hover {
+  color: #fff;
+}
+
+.learn-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.55rem;
+}
+
+.learn-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.48rem 0.78rem;
+  border: 1px solid rgb(244 239 230 / 0.16);
+  background: rgb(244 239 230 / 0.03);
+  color: #fff;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.learn-flow-arrow {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.learn-callout {
+  margin-top: 1.35rem;
+  max-width: 42rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px solid rgb(244 239 230 / 0.14);
+  border-left: 2px solid var(--color-accent);
+  background: rgb(244 239 230 / 0.03);
+}
+
+.learn-callout p {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--color-paper);
+}
+
+.learn-callout-warning {
+  border-color: rgb(160 90 64 / 0.55);
+  border-left-color: var(--color-accent);
+  background: rgb(160 90 64 / 0.1);
+}
+
+.learn-card {
+  padding: 1.2rem 1.25rem;
+  border: 1px solid rgb(244 239 230 / 0.12);
+  background: rgb(12 12 12 / 0.72);
+}
+
+.learn-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.learn-card-link:hover {
+  border-color: rgb(244 239 230 / 0.28);
+}
+
+.learn-table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.learn-table th,
+.learn-table td {
+  border-bottom: 1px solid rgb(244 239 230 / 0.12);
+  padding: 0.55rem 0.7rem;
+  vertical-align: top;
+}
+
+.learn-table th {
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(244 239 230 / 0.55);
+}
+
+.learn-facts,
+.learn-loop {
+  max-width: 40rem;
+  margin-top: 1.15rem;
+  padding-left: 1.15rem;
+}
+
+.learn-facts li,
+.learn-loop li {
+  margin: 0.4rem 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--color-paper);
+}
+
+.learn-faq {
+  border-top: 1px solid rgb(244 239 230 / 0.12);
+}
+
+.learn-faq-item {
+  border-bottom: 1px solid rgb(244 239 230 / 0.12);
+}
+
+.learn-faq-item summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  cursor: pointer;
+  list-style: none;
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.learn-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.learn-faq-item summary:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.learn-faq-chevron {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--color-accent);
+  transition: transform 0.15s ease;
+}
+
+.learn-faq-item[open] .learn-faq-chevron {
+  transform: rotate(180deg);
+}
+
+.learn-faq-panel {
+  padding: 0 0 1.1rem;
+}
+
+.learn-faq-panel p,
+.learn-faq-panel li {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+
+.learn-faq-panel p + p,
+.learn-faq-panel ul {
+  margin-top: 0.7rem;
+}
+
+.learn-faq-panel li + li {
+  margin-top: 0.35rem;
+}
+
+.learn-risks {
+  margin-top: 1.25rem;
+  padding: 1.6rem 1.25rem 1.35rem;
+  border: 1px solid rgb(160 90 64 / 0.45);
+  background: rgb(160 90 64 / 0.08);
+}
+
+.learn-risk h3 {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.learn-risk p {
+  margin-top: 0.45rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--color-paper);
+}
+
+.learn-risk-end {
+  margin-top: 1.35rem;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #fff;
+}
+
+.learn-final {
+  padding-bottom: 1rem;
+}
+
+#contracts {
+  scroll-margin-top: 4.5rem;
+}

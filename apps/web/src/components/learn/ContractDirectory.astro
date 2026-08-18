@@ -1,0 +1,45 @@
+---
+import ExternalLink from '@lucide/astro/icons/external-link';
+import { CONTRACT_LABELS, contractDirectory, contractExplorerUrl } from '../../lib/learn';
+
+const directory = contractDirectory();
+---
+
+<div class="grid gap-4">
+  {
+    directory.map((entry) => (
+      <article class="learn-card">
+        <h3 class="text-[0.7rem] tracking-[0.22em] text-accent uppercase">{entry.network.name}</h3>
+        {entry.contracts ? (
+          <ul class="mt-3 space-y-2">
+            {CONTRACT_LABELS.map(([key, label]) => {
+              const address = entry.contracts?.[key];
+              if (!address) {
+                return null;
+              }
+              return (
+                <li class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                  <span class="text-[0.7rem] tracking-[0.18em] text-muted uppercase">{label}</span>
+                  <a
+                    class="inline-flex items-center gap-1.5 break-all font-mono text-[0.78rem] text-paper hover:text-white"
+                    href={contractExplorerUrl(entry.network, address)}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {address}
+                    <ExternalLink class="h-3.5 w-3.5 shrink-0 text-accent" stroke-width={1.5} aria-hidden="true" />
+                    <span class="sr-only"> on {entry.network.name} explorer, opens in a new tab</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p class="mt-2 text-sm leading-relaxed text-muted">
+            {entry.network.disabledReason ?? 'No deployment is published for this network.'}
+          </p>
+        )}
+      </article>
+    ))
+  }
+</div>

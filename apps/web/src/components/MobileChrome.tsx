@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { ExternalLink, Menu, X } from 'lucide-react';
 import { WalletProviders } from './wallet/WalletProviders.tsx';
 import { NetworkSwitch } from './NetworkSwitch.tsx';
 import { ConnectButton } from './wallet/ConnectButton.tsx';
 
 export function MobileChrome({
-  graveHref,
+  learnHref,
+  appHref,
   docsHref,
-  sourceHref,
-  onGrave,
+  githubHref,
+  onLearn,
+  onApp,
   onDocs,
   showConnect,
 }: {
-  graveHref: string;
+  learnHref: string;
+  appHref: string;
   docsHref: string;
-  sourceHref: string;
-  onGrave: boolean;
+  githubHref: string;
+  onLearn: boolean;
+  onApp: boolean;
   onDocs: boolean;
   showConnect: boolean;
 }) {
@@ -66,19 +70,24 @@ export function MobileChrome({
           />
           <div className="absolute inset-x-0 top-[3.25rem] border-b border-white/10 bg-[#0c0c0c] px-5 py-6 md:top-[3.6rem]">
             <nav className="flex flex-col gap-4" aria-label="Primary">
-              <a href={graveHref} className={tabClass(onGrave)} aria-current={onGrave ? 'page' : undefined}>
-                Grave
+              <a href={learnHref} className={tabClass(onLearn)} aria-current={onLearn ? 'page' : undefined}>
+                Learn
+              </a>
+              <a href={appHref} className={tabClass(onApp)} aria-current={onApp ? 'page' : undefined}>
+                App
               </a>
               <a href={docsHref} className={tabClass(onDocs)} aria-current={onDocs ? 'page' : undefined}>
                 Docs
               </a>
               <a
-                href={sourceHref}
+                href={githubHref}
                 rel="noopener noreferrer"
                 target="_blank"
-                className="text-sm tracking-[0.22em] text-white uppercase"
+                className="inline-flex items-center gap-1.5 text-sm tracking-[0.22em] text-white uppercase"
               >
-                Source
+                GitHub
+                <ExternalLink className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} aria-hidden="true" />
+                <span className="sr-only">(opens in a new tab)</span>
               </a>
             </nav>
             <div className="mt-6">
