@@ -58,13 +58,35 @@ export const RISK_WARNING_DETAILS = [
   'Capital is at high risk. Use Nether entirely at your own risk.',
 ] as const;
 
-function githubRepoUrl(): string {
+export const SOCIAL_IMAGE_FILE = 'hero.png';
+export const SOCIAL_IMAGE_WIDTH = 1122;
+export const SOCIAL_IMAGE_HEIGHT = 1402;
+
+function envString(key: string): string | undefined {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
-  const fromEnv = env?.PUBLIC_GITHUB_REPO;
-  if (typeof fromEnv === 'string' && fromEnv.trim()) {
-    return fromEnv.trim().replace(/\/+$/, '');
+  const value = env?.[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function githubRepoUrl(): string {
+  const fromEnv = envString('PUBLIC_GITHUB_REPO');
+  if (fromEnv) {
+    return fromEnv.replace(/\/+$/, '');
   }
   return GITHUB_REPO_FALLBACK;
+}
+
+export function siteAssetUrl(pathname: string): string {
+  const originRaw = envString('SITE') ?? SITE_ORIGIN;
+  const origin = originRaw.endsWith('/') ? originRaw : `${originRaw}/`;
+  const baseRaw = envString('BASE_URL') ?? SITE_BASE;
+  const base = baseRaw.endsWith('/') ? baseRaw : `${baseRaw}/`;
+  const trimmed = pathname.replace(/^\/+/, '');
+  return new URL(`${base}${trimmed}`, origin).href;
+}
+
+export function socialImageUrl(): string {
+  return siteAssetUrl(SOCIAL_IMAGE_FILE);
 }
 
 export function withBase(pathname = ''): string {
