@@ -21,7 +21,8 @@ import {
   formatLearnNumber,
   hasIndependentProductionAudit,
 } from '../lib/learn';
-import { GITHUB_REPO_URL, withBase } from '../lib/site';
+import { DISCORD_URL, GITHUB_REPO_URL, X_URL, withBase } from '../lib/site';
+import { SocialMark } from '../components/SocialMark.tsx';
 
 const docsHref = withBase('docs');
 const specHref = withBase('docs/protocol-spec');
@@ -138,6 +139,7 @@ const toc = [
   { href: '#strategy-losses', label: 'Strategy losses' },
   { href: '#allocation', label: 'Token allocation' },
   { href: '#faq', label: 'FAQ' },
+  { href: '#community', label: 'Questions' },
   { href: '#risks', label: 'Risks' },
   { href: '#verify', label: 'Verify it' },
 ] as const;
@@ -684,6 +686,24 @@ const toc = [
             )
           }
         </FaqItem>
+        <FaqItem question="Where can I ask questions?">
+          <p>
+            If you have questions, you can ask them in{' '}
+            <a href={DISCORD_URL} rel="noopener noreferrer" target="_blank">
+              Nether's Discord
+              <span class="sr-only">, opens in a new tab</span>
+            </a>
+            .
+          </p>
+          <p>
+            Protocol updates are also posted on{' '}
+            <a href={X_URL} rel="noopener noreferrer" target="_blank">
+              X
+              <span class="sr-only">, opens in a new tab</span>
+            </a>
+            .
+          </p>
+        </FaqItem>
         <FaqItem question="Where can I verify the protocol?">
           <ul>
             <li>
@@ -708,6 +728,42 @@ const toc = [
             </li>
           </ul>
         </FaqItem>
+      </div>
+    </section>
+
+    <section class="learn-section" id="community" aria-labelledby="learn-community">
+      <h2 id="learn-community" class="learn-heading">Questions?</h2>
+      <p class="mt-4 max-w-2xl text-sm leading-relaxed text-paper">
+        If you have questions, you can ask them in Nether's Discord. Follow along on X for updates.
+      </p>
+      <div class="mt-8 grid gap-4 md:grid-cols-2">
+        <a
+          class="learn-card learn-card-link"
+          href={DISCORD_URL}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <SocialMark name="discord" className="h-6 w-6 text-white" />
+          <h3 class="mt-3 text-[0.7rem] tracking-[0.22em] text-accent uppercase">
+            Discord
+            <ExternalLink class="ml-1.5 inline h-3.5 w-3.5 align-[-0.1em]" stroke-width={1.5} />
+          </h3>
+          <p class="mt-2 text-sm leading-relaxed text-paper/90">
+            Ask questions in Nether's Discord community.
+          </p>
+          <span class="sr-only">, opens in a new tab</span>
+        </a>
+        <a class="learn-card learn-card-link" href={X_URL} rel="noopener noreferrer" target="_blank">
+          <SocialMark name="x" className="h-6 w-6 text-white" />
+          <h3 class="mt-3 text-[0.7rem] tracking-[0.22em] text-accent uppercase">
+            X
+            <ExternalLink class="ml-1.5 inline h-3.5 w-3.5 align-[-0.1em]" stroke-width={1.5} />
+          </h3>
+          <p class="mt-2 text-sm leading-relaxed text-paper/90">
+            Follow @netherprotocol for protocol updates.
+          </p>
+          <span class="sr-only">, opens in a new tab</span>
+        </a>
       </div>
     </section>
 

@@ -4,6 +4,7 @@ import FeatureIcon from '../components/FeatureIcons.astro';
 import GraveCta from '../components/GraveCta.astro';
 import { HolderStats } from '../components/HolderStats.tsx';
 import RiskWarning from '../components/RiskWarning.astro';
+import { SocialLinks } from '../components/SocialLinks.tsx';
 import {
   FEATURES,
   HOLDER_COPY,
@@ -43,6 +44,7 @@ const heroSrc = withBase('hero.png');
           >
             {SECONDARY_CTA}
           </a>
+          <SocialLinks className="flex items-center gap-3" iconClass="h-5 w-5" />
         </div>
         <div class="mt-4">
           <RiskWarning />

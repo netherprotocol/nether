@@ -3,6 +3,7 @@ import { ExternalLink, Menu, X } from 'lucide-react';
 import { WalletProviders } from './wallet/WalletProviders.tsx';
 import { NetworkSwitch } from './NetworkSwitch.tsx';
 import { ConnectButton } from './wallet/ConnectButton.tsx';
+import { SocialLinks } from './SocialLinks.tsx';
 
 export function MobileChrome({
   learnHref,
@@ -89,6 +90,12 @@ export function MobileChrome({
                 <ExternalLink className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} aria-hidden="true" />
                 <span className="sr-only">(opens in a new tab)</span>
               </a>
+              <SocialLinks
+                labeled
+                className="flex flex-col gap-4"
+                iconClass="h-3.5 w-3.5"
+                linkClass="inline-flex items-center gap-1.5 text-sm tracking-[0.22em] text-white uppercase"
+              />
             </nav>
             <div className="mt-6">
               <NetworkSwitch />

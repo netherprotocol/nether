@@ -47,6 +47,8 @@ export const STATS: readonly Stat[] = [
 
 export const GITHUB_REPO_FALLBACK = 'https://github.com/rastsislaux/nether';
 export const GITHUB_REPO_URL = githubRepoUrl();
+export const DISCORD_URL = 'https://discord.gg/N9mTHr5VE';
+export const X_URL = 'https://x.com/netherprotocol';
 
 export const RISK_WARNING =
   'Capital at high risk, team does not hold any responsibility for possible losses. Hover for details.';

@@ -9,6 +9,7 @@ import { MIN_GAS_RESERVE_WEI } from '../../lib/slippage.ts';
 import { simulateThenSend, waitOneConfirmation, type WalletWriter } from '../../lib/tx.ts';
 import { isUserRejected, revertShortMessage } from '../../lib/errors.ts';
 import { useLiveSnapshot } from '../useLiveSnapshot.ts';
+import { SocialLinks } from '../SocialLinks.tsx';
 import { WalletProviders } from '../wallet/WalletProviders.tsx';
 import { WrongNetworkBanner } from '../wallet/WrongNetworkBanner.tsx';
 import { BuryForm } from './BuryForm.tsx';
@@ -261,6 +262,7 @@ function DashboardBody() {
     return (
       <div className="px-5 py-10 md:px-10 md:py-14">
         <RpcDown network={network} contracts={contracts} onRetry={retry} />
+        <SocialLinks className="mt-8 flex items-center gap-4" />
         <MobileDock />
       </div>
     );
@@ -378,6 +380,7 @@ function DashboardBody() {
         onChain={onChain}
         nethBalance={nethBalance}
       />
+      <SocialLinks className="flex items-center gap-4 px-1 pt-1 md:pt-2" />
       <MobileDock />
     </div>
   );
