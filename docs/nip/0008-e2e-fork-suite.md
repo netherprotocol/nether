@@ -8,6 +8,7 @@
 - Venue: Accepted [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md)
 - Pool lookup: Accepted [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md)
 - Strategy admin: Accepted [`NDR-0005`](../ndr/0005-strategy-security.md)
+- Impaired capital: Accepted [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) (happy-path Aave→Aave still one successful execute; impair tests are [`NIP-0012`](0012-impaired-strategy-capital.md))
 - Adapter: Implemented [`0007-aave-adapter.md`](0007-aave-adapter.md)
 - Working versions: Proposed [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (not accepted)
 - License: [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md) (`SPDX-License-Identifier: UNLICENSED`)

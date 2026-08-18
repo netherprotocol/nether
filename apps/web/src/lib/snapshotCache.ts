@@ -20,9 +20,19 @@ type SerializedAuction = {
   active: boolean;
 };
 
+type SerializedImpaired = {
+  adapter: string;
+  owed: string;
+};
+
 type SerializedSnapshot = {
   now: string;
   protectedPrincipal: string;
+  requiredBacking: string;
+  impairedCapital: string;
+  impairedAdapters: SerializedImpaired[];
+  pendingWithdrawFailures: string;
+  lastMigrationFailureTime: string;
   nethSupply: string;
   currentEra: string;
   currentEraBuried: string;
@@ -49,6 +59,14 @@ export function serializeSnapshot(snapshot: ProtocolSnapshot): SerializedSnapsho
   return {
     now: snapshot.now.toString(),
     protectedPrincipal: snapshot.protectedPrincipal.toString(),
+    requiredBacking: snapshot.requiredBacking.toString(),
+    impairedCapital: snapshot.impairedCapital.toString(),
+    impairedAdapters: snapshot.impairedAdapters.map((entry) => ({
+      adapter: entry.adapter,
+      owed: entry.owed.toString(),
+    })),
+    pendingWithdrawFailures: snapshot.pendingWithdrawFailures.toString(),
+    lastMigrationFailureTime: snapshot.lastMigrationFailureTime.toString(),
     nethSupply: snapshot.nethSupply.toString(),
     currentEra: snapshot.currentEra.toString(),
     currentEraBuried: snapshot.currentEraBuried.toString(),
@@ -90,6 +108,11 @@ export function deserializeSnapshot(raw: unknown): ProtocolSnapshot | null {
   }
   const now = asBigInt(value.now);
   const protectedPrincipal = asBigInt(value.protectedPrincipal);
+  const requiredBacking = optionalBig(value.requiredBacking, protectedPrincipal);
+  const impairedCapital = optionalBig(value.impairedCapital, 0n);
+  const pendingWithdrawFailures = optionalBig(value.pendingWithdrawFailures, 0n);
+  const lastMigrationFailureTime = optionalBig(value.lastMigrationFailureTime, 0n);
+  const impairedAdapters = deserializeImpaired(value.impairedAdapters);
   const nethSupply = asBigInt(value.nethSupply);
   const currentEra = asBigInt(value.currentEra);
   const currentEraBuried = asBigInt(value.currentEraBuried);
@@ -106,6 +129,11 @@ export function deserializeSnapshot(raw: unknown): ProtocolSnapshot | null {
   if (
     now == null ||
     protectedPrincipal == null ||
+    requiredBacking == null ||
+    impairedCapital == null ||
+    pendingWithdrawFailures == null ||
+    lastMigrationFailureTime == null ||
+    impairedAdapters == null ||
     nethSupply == null ||
     currentEra == null ||
     currentEraBuried == null ||
@@ -125,6 +153,11 @@ export function deserializeSnapshot(raw: unknown): ProtocolSnapshot | null {
   return {
     now,
     protectedPrincipal,
+    requiredBacking,
+    impairedCapital,
+    impairedAdapters,
+    pendingWithdrawFailures,
+    lastMigrationFailureTime,
     nethSupply,
     currentEra,
     currentEraBuried,
@@ -222,6 +255,36 @@ function deserializeAuction(raw: unknown): AuctionSnapshot | null {
     nethBurned,
     active: value.active,
   };
+}
+
+function deserializeImpaired(raw: unknown): { adapter: Address; owed: bigint }[] | null {
+  if (raw === undefined) {
+    return [];
+  }
+  if (!Array.isArray(raw)) {
+    return null;
+  }
+  const entries: { adapter: Address; owed: bigint }[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') {
+      return null;
+    }
+    const value = item as Partial<SerializedImpaired>;
+    const adapter = asAddress(value.adapter);
+    const owed = asBigInt(value.owed);
+    if (!adapter || owed == null) {
+      return null;
+    }
+    entries.push({ adapter, owed });
+  }
+  return entries;
+}
+
+function optionalBig(value: unknown, fallback: bigint | null): bigint | null {
+  if (value === undefined) {
+    return fallback;
+  }
+  return asBigInt(value);
 }
 
 function asBigInt(value: unknown): bigint | null {

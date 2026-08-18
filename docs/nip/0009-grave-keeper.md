@@ -6,9 +6,10 @@
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Frontend toolchain to reuse: Accepted [`NDR-0003`](../ndr/0003-frontend-stack.md) (TypeScript / Node / npm; not the Astro site)
+- Harvest / recover: [`NIP-0012`](../nip/0012-impaired-strategy-capital.md) (Implemented; [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md))
 - License: [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md) (app tree: `"private": true`; no SPDX required beyond that unless a later docs change says otherwise)
 
-This plan is the W8 Gravekeeper breakdown. It does not change era math, harvest rules, Reaper economics, or contract ABIs. The spec wins if anything below disagrees.
+This plan is the W8 Gravekeeper breakdown. It does not change era math, harvest rules, Reaper economics, or contract ABIs except as later required by [`NIP-0012`](0012-impaired-strategy-capital.md). The spec wins if anything below disagrees.
 
 No NDR is opened for this slice. Stack, CLI shape, and crank policy are recorded here so implementation can start without a freeze record. A later NDR may pin versions if they must lock before M3.
 
@@ -22,14 +23,14 @@ The bot must:
 - **view-check and simulate before every paid call**, so it does not send transactions that would revert or move dust that is not worth Base gas
 - **log ETH spent on gas** (L2 execution plus OP-stack L1 data fee) so operators can see what it costs to support the protocol
 
-It does not sell NETH to the Reaper, migrate strategies, or replace the dashboard.
+It does not sell NETH to the Reaper, migrate strategies (`executeStrategyMigration` remains owner-only), or replace the dashboard. Permissionless `recoverImpaired` is in scope when [`NIP-0012`](0012-impaired-strategy-capital.md) is implemented.
 
 ## 2. Scope
 
 In scope:
 
 - Isolated `apps/keeper/` Node + TypeScript console app (own npm manifest; no root workspace)
-- Crank loop: harvest when yield is realizable; finalize an expired auction; start an auction when startable ETH exists and none is active
+- Crank loop: harvest when yield is realizable; finalize an expired auction; start an auction when startable ETH exists and none is active; recover impaired capital when a simulation would increase Grave ETH ([`NIP-0012`](0012-impaired-strategy-capital.md))
 - Conservative paid-call policy: views → simulate → estimate fee → economic floor → send
 - Append-only gas ledger (JSONL) plus human console lines, including session and lifetime operator spend
 - `once` (default) and `watch` modes; `--dry-run` never sends
@@ -91,7 +92,7 @@ The crank policy must be unit-tested without a live Base node and without a mock
 planTick(snapshot, fees, policy) → PlannedAction[]
 ```
 
-`PlannedAction` is `finalize` | `harvest` | `start` | `skip` with a reason. A thin runner loads config, reads a snapshot, asks `planTick`, then (unless `--dry-run`) simulates, re-checks the fee floor, sends, and logs gas.
+`PlannedAction` is `finalize` | `recoverImpaired` | `harvest` | `start` | `skip` with a reason. A thin runner loads config, reads a snapshot, asks `planTick`, then (unless `--dry-run`) simulates, re-checks the fee floor, sends, and logs gas.
 
 The RPC port used in tests is a hand-written stub with only the methods the runner needs (≤ the snapshot + simulate + estimate + send + receipt surface). Do not add Jest/Vitest/Mockito.
 
@@ -105,7 +106,7 @@ The RPC port used in tests is a hand-written stub with only the methods the runn
 | One paid tx per process exit only | `watch` could not harvest then start after the harvest lands. |
 | Sequential permissionless calls in one tick, each re-checked after the previous receipt (chosen) | Matches the on-chain split; still conservative because each send has its own view/sim/fee gate. |
 
-Order inside a tick (see §5): **finalize → harvest → start**. Finalize unblocks start. Harvest credits `availableReaperETH` for start. Do not start before finalize if an expired auction is still `active`.
+Order inside a tick (see §5): **finalize → recoverImpaired → harvest → start**. Finalize unblocks start. Recover returns principal (and may raise `requiredBacking`) before harvest. Harvest credits `availableReaperETH` for start. Do not start before finalize if an expired auction is still `active`. Keeper still does not `executeStrategyMigration`. Recover details: [`NIP-0012`](0012-impaired-strategy-capital.md) §13.
 
 ### 3.4 Operator-funded EOA, zero protocol tip
 
@@ -127,9 +128,13 @@ From `Grave` ([`NIP-0004`](0004-grave.md), [`NIP-0006`](0006-strategy.md)):
 harvestableYield() → uint256
 currentNAV() → uint256
 protectedPrincipal() → uint256
+requiredBacking() → uint256          // after NIP-0012; else compute once exposed
+impairedCapital() → uint256
+impairedAdapterCount() / impairedAdapterAt(i) / impairedOwed(adapter)
 activeStrategy() → address
 reaper() → address
 pendingStrategy() → (adapter, executeAfter)
+pendingWithdrawFailures() / lastMigrationFailureTime()
 ```
 
 From `Reaper` ([`NIP-0005`](0005-reaper.md)):
@@ -214,7 +219,11 @@ shouldFinalize  = auction.active && now >= auction.endTime
 
 shouldHarvest   = harvestableYield > 0
                   && reaper is set (harvest() would not revert ReaperNotSet)
-                  && currentNAV >= protectedPrincipal   // else harvestable is 0 anyway; alert
+                  && currentNAV >= requiredBacking   // live-adapter watermark; not protectedPrincipal
+
+shouldRecover   = each listed impaired adapter with owed > 0
+                  && simulate recoverImpaired would increase Grave ETH
+                  // MUST NOT send revert or 0-pay; simulation is not repayment ([`NIP-0012`](0012-impaired-strategy-capital.md))
 
 shouldStart     = !auction.active && startable > 0
                   && (if shouldFinalize was true this tick, wait until finalize receipt)
@@ -226,16 +235,19 @@ shouldStart     = !auction.active && startable > 0
 
 ```text
 snapshot = readViews()          // one multicall + two balances
-emitAlerts(snapshot)            // NAV < principal, pending strategy, view revert
+emitAlerts(snapshot)            // live loss, impaired residual, pending strategy, view revert
 
 if shouldFinalize(snapshot):
     trySend(finalizeAuction)
+    snapshot = readViews()
 
-    snapshot = readViews()      // required; start/harvest gates must see active=false
+for each listed impaired adapter where simulate would increase Grave ETH:
+    trySend(recoverImpaired(adapter))
+    snapshot = readViews()
 
 if shouldHarvest(snapshot):
     trySend(harvest)
-    snapshot = readViews()      // start must see new availableReaperETH / surplus
+    snapshot = readViews()
 
 if shouldStart(snapshot):
     trySend(startAuction)
@@ -372,9 +384,11 @@ Spec §19 monitoring that this process can see without an event database:
 
 | Condition | Action |
 |---|---|
-| `currentNAV < protectedPrincipal` | log alert every tick; do not harvest |
+| `currentNAV < requiredBacking` | log alert every tick; do not harvest (live-adapter loss) |
+| `impairedCapital > 0` | log residual claim; still harvest if `harvestableYield > 0`; do not skip solely because `currentNAV < protectedPrincipal` |
 | Grave NAV/harvestable view reverts | log alert; skip harvest |
-| harvest/start/finalize simulation revert that is **not** an expected empty-crank error | log alert |
+| harvest/start/finalize/recover simulation revert that is **not** an expected empty-crank error | log alert |
+| recover simulation reverts or Grave ETH would not increase | skip that adapter; do not drop it from consideration next tick |
 | `pendingStrategy.adapter != 0` | log notice with `executeAfter` (do not execute; admin-only) |
 | `activeStrategy` changed vs the previous tick’s snapshot | log notice |
 | operator balance below a warning wei threshold (e.g. 10× last fee) | log warning |
@@ -398,7 +412,9 @@ Fixture snapshots covering:
 - `!active && availableReaperETH == 0 && surplus > 0` → start eligible (surplus counts)
 - `!active && startable > 0` but below auction fee floor → skip start
 - finalize has no fee floor even when `ethRemaining == 0`
-- `currentNAV < protectedPrincipal` → no harvest
+- `currentNAV < requiredBacking` → no harvest
+- `currentNAV < protectedPrincipal` with `impairedCapital > 0` and `harvestableYield > 0` → harvest eligible
+- recover: simulation revert or 0 Grave-ETH increase → no send; adapter still considered next tick
 - lost-race style: planner still proposes harvest; crank tests assert a simulated revert becomes skip, not throw
 
 ### 10.2 `crank.ts` with an in-process stub
@@ -450,7 +466,7 @@ This slice is done when:
 
 - `apps/keeper` is a Node 22 + TypeScript 5.9.3 + viem console app with its own lockfile
 - `once` and `watch` run on Linux, macOS, and Windows via `node dist/index.js` (no POSIX-only scripts required)
-- a tick never sends `harvest` / `startAuction` / `finalizeAuction` without a passing view gate and a passing simulation
+- a tick never sends `harvest` / `startAuction` / `finalizeAuction` / `recoverImpaired` without a passing view gate and a passing simulation
 - harvest and start are skipped when simulated size is below the fee floor; finalize of an expired auction is not skipped for dust
 - standalone `collectSurplus`, `sellToReaper`, and admin functions are absent
 - every sent tx appends a JSONL record whose `feeWei` includes OP-stack `l1Fee` when present, and the console prints running operator spend

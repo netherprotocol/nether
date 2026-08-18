@@ -67,11 +67,13 @@ contract StrategyHandler is Test {
         amount = bound(amount, 0, 10 ether);
         uint256 principal = grave.protectedPrincipal();
         uint256 minted = grave.totalNethMinted();
+        uint256 impaired = grave.impairedCapital();
         vm.deal(address(this), amount);
         (bool ok,) = address(grave).call{value: amount}("");
         ok;
         assertEq(grave.protectedPrincipal(), principal);
         assertEq(grave.totalNethMinted(), minted);
+        assertEq(grave.impairedCapital(), impaired);
     }
 
     function donateReaper(uint256 amount) public {
@@ -87,11 +89,13 @@ contract StrategyHandler is Test {
         uint256 principal = grave.protectedPrincipal();
         uint256 adminBefore = admin.balance;
         uint256 idleBefore = address(grave).balance;
-        uint256 reserved = idleBefore < principal ? idleBefore : principal;
+        uint256 req = grave.requiredBacking();
+        uint256 reserved = idleBefore < req ? idleBefore : req;
         try grave.harvest() {
             assertEq(grave.protectedPrincipal(), principal);
             assertEq(admin.balance, adminBefore);
             assertEq(address(grave).balance, reserved);
+            assertGe(grave.currentNAV(), req);
         } catch {
             assertEq(grave.protectedPrincipal(), principal);
             assertEq(admin.balance, adminBefore);
@@ -155,12 +159,17 @@ contract StrategyHandler is Test {
     }
 
     function executeStrategyMigration(uint256 warpSeed) public {
-        (, uint256 executeAfter) = grave.pendingStrategy();
-        if (executeAfter == 0) {
+        (address pendingAdapter, uint256 executeAfter) = grave.pendingStrategy();
+        if (pendingAdapter == address(0) || executeAfter == 0) {
             return;
         }
         uint256 extra = bound(warpSeed, 0, 2 days);
-        if (block.timestamp < executeAfter + extra) {
+        if (grave.pendingWithdrawFailures() > 0) {
+            uint256 retryAfter = grave.lastMigrationFailureTime() + 1 days;
+            if (block.timestamp < retryAfter) {
+                vm.warp(retryAfter + extra);
+            }
+        } else if (grave.activeStrategy() != address(0) && block.timestamp < executeAfter + extra) {
             vm.warp(executeAfter + extra);
         }
         uint256 adminBefore = admin.balance;
@@ -169,12 +178,49 @@ contract StrategyHandler is Test {
         try grave.executeStrategyMigration() {
             address active = grave.activeStrategy();
             assertTrue(active == address(adapterA) || active == address(adapterB));
-            (address pending,) = grave.pendingStrategy();
-            assertEq(pending, address(0));
         } catch {}
         assertEq(admin.balance, adminBefore);
         assertEq(grave.protectedPrincipal(), principal);
         assertEq(neth.balanceOf(admin), 0);
+    }
+
+    function recoverImpaired(uint256 indexSeed) public {
+        uint256 n = grave.impairedAdapterCount();
+        if (n == 0) {
+            return;
+        }
+        address adapter = grave.impairedAdapterAt(indexSeed % n);
+        uint256 owedBefore = grave.impairedOwed(adapter);
+        uint256 impairedBefore = grave.impairedCapital();
+        uint256 adminBefore = admin.balance;
+        uint256 principal = grave.protectedPrincipal();
+        try grave.recoverImpaired(adapter) returns (uint256 received) {
+            uint256 pay = received < owedBefore ? received : owedBefore;
+            assertEq(grave.impairedCapital(), impairedBefore - pay);
+            assertEq(admin.balance, adminBefore);
+            assertGt(received, 0);
+        } catch {
+            assertEq(grave.impairedOwed(adapter), owedBefore);
+            assertEq(grave.impairedCapital(), impairedBefore);
+            assertEq(admin.balance, adminBefore);
+        }
+        assertEq(grave.protectedPrincipal(), principal);
+    }
+
+    function setWithdrawRevert(bool enabled) public {
+        TestInvestAdapter a = _activeAdapter();
+        if (address(a) == address(0)) {
+            return;
+        }
+        a.setWithdrawRevert(enabled);
+    }
+
+    function setNavRevert(bool enabled) public {
+        TestInvestAdapter a = _activeAdapter();
+        if (address(a) == address(0)) {
+            return;
+        }
+        a.setNavRevert(enabled);
     }
 
     function simulateProfit(uint256 amount) public {
@@ -277,7 +323,7 @@ contract StrategyInvariantTest is Test {
         actors[2] = makeAddr("carol");
         handler = new StrategyHandler(grave, neth, reaper, adapterA, adapterB, admin, actors);
 
-        bytes4[] memory selectors = new bytes4[](16);
+        bytes4[] memory selectors = new bytes4[](19);
         selectors[0] = StrategyHandler.bury.selector;
         selectors[1] = StrategyHandler.donateGrave.selector;
         selectors[2] = StrategyHandler.donateReaper.selector;
@@ -294,6 +340,9 @@ contract StrategyInvariantTest is Test {
         selectors[13] = StrategyHandler.transferNeth.selector;
         selectors[14] = StrategyHandler.burnNeth.selector;
         selectors[15] = StrategyHandler.warpTime.selector;
+        selectors[16] = StrategyHandler.recoverImpaired.selector;
+        selectors[17] = StrategyHandler.setWithdrawRevert.selector;
+        selectors[18] = StrategyHandler.setNavRevert.selector;
         targetContract(address(handler));
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
@@ -328,6 +377,19 @@ contract StrategyInvariantTest is Test {
     function invariant_eraRateNeverIncreasesFromGenesis() public view {
         assertLe(grave.currentRewardRate(), 1_000_000 ether);
         assertGe(grave.currentEraCapacity(), 10 ether);
+    }
+
+    function invariant_impairedCapitalEqualsOwed() public view {
+        uint256 n = grave.impairedAdapterCount();
+        uint256 sum;
+        for (uint256 i; i < n; ++i) {
+            address adapter = grave.impairedAdapterAt(i);
+            uint256 owed = grave.impairedOwed(adapter);
+            assertGt(owed, 0);
+            sum += owed;
+        }
+        assertEq(grave.impairedCapital(), sum);
+        assertEq(grave.requiredBacking(), grave.protectedPrincipal() - grave.impairedCapital());
     }
 
     function invariant_noPause() public {

@@ -12,6 +12,13 @@ import type { NetworkConfig } from '../../lib/networks.ts';
 import type { ProtocolSnapshot } from '../../lib/protocol.ts';
 import { AddressLink, ProgressBar, StatRow, Tip } from './ui.tsx';
 
+const STRATEGY_MIGRATION_RETRY_DELAY = 86400n;
+
+function migrationRetryWait(snapshot: ProtocolSnapshot): bigint {
+  const retryAfter = snapshot.lastMigrationFailureTime + STRATEGY_MIGRATION_RETRY_DELAY;
+  return retryAfter > snapshot.now ? retryAfter - snapshot.now : 0n;
+}
+
 export function GraveStats({
   snapshot,
   network,
@@ -34,6 +41,8 @@ export function GraveStats({
         ? snapshot.pendingExecuteAfter - snapshot.now
         : 0n
       : 0n;
+  const retryWait =
+    snapshot && snapshot.pendingWithdrawFailures > 0n ? migrationRetryWait(snapshot) : 0n;
 
   return (
     <div className="divide-y divide-white/10">
@@ -54,7 +63,25 @@ export function GraveStats({
       <StatRow label="Harvestable yield">
         {snapshot ? formatEth(snapshot.harvestableYield) : '—'}
       </StatRow>
+      <StatRow label="Required backing">
+        {snapshot ? formatEth(snapshot.requiredBacking) : '—'}
+      </StatRow>
       <StatRow label="Strategy NAV">{snapshot ? formatEth(snapshot.currentNAV) : '—'}</StatRow>
+      <StatRow label="Impaired capital">
+        {snapshot ? formatEth(snapshot.impairedCapital) : '—'}
+      </StatRow>
+      {snapshot && snapshot.impairedAdapters.length > 0 ? (
+        <StatRow label="Impaired adapters">
+          <div className="space-y-2">
+            {snapshot.impairedAdapters.map((entry) => (
+              <div key={entry.adapter}>
+                <AddressLink address={entry.adapter} network={network} />
+                <p className="mt-1 text-xs text-muted">{formatEth(entry.owed)} owed</p>
+              </div>
+            ))}
+          </div>
+        </StatRow>
+      ) : null}
       <StatRow label="Active strategy">
         {snapshot && snapshot.activeStrategy !== zeroAddress ? (
           <AddressLink address={snapshot.activeStrategy} network={network} />
@@ -74,6 +101,12 @@ export function GraveStats({
             <p className="mt-1 text-xs text-muted">
               {pendingWait > 0n ? `Activates in ${formatDuration(pendingWait)}` : 'Ready to activate'}
             </p>
+            {snapshot.pendingWithdrawFailures > 0n ? (
+              <p className="mt-1 text-xs text-muted">
+                Failed withdraws: {snapshot.pendingWithdrawFailures.toString()}/3
+                {retryWait > 0n ? ` · Retry in ${formatDuration(retryWait)}` : ' · Retry ready'}
+              </p>
+            ) : null}
           </div>
         </StatRow>
       ) : null}

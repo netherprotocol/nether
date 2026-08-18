@@ -22,10 +22,21 @@ export function alertsFor(
     });
   }
 
-  if (!snapshot.navViewFailed && snapshot.currentNAV < snapshot.protectedPrincipal) {
+  if (!snapshot.navViewFailed && snapshot.currentNAV < snapshot.protectedPrincipal && snapshot.impairedCapital === 0n) {
     alerts.push({
       level: 'alert',
       message: `currentNAV ${snapshot.currentNAV} < protectedPrincipal ${snapshot.protectedPrincipal}`,
+    });
+  }
+
+  if (snapshot.impairedCapital > 0n) {
+    const listed = snapshot.impairedAdapters
+      .filter((entry) => entry.owed > 0n)
+      .map((entry) => `${entry.adapter}:${entry.owed}`)
+      .join(',');
+    alerts.push({
+      level: 'alert',
+      message: `impaired residual claim impairedCapital=${snapshot.impairedCapital}${listed ? ` adapters=${listed}` : ''}`,
     });
   }
 

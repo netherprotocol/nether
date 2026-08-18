@@ -5,12 +5,15 @@ import { runTick, type CrankState, type Logger } from './crank.js';
 import { openGasLog } from './gasLog.js';
 import { assertChainId, assertReaperMatch, createViemPort } from './viemPort.js';
 
-export const HELP = `Nether Grave keeper — permissionless cranker for harvest(), startAuction(), and finalizeAuction().
+export const HELP = `Nether Grave keeper — permissionless cranker for harvest(), recoverImpaired(), startAuction(), and finalizeAuction().
 
 The keeper is not a privileged role. It pays its own gas from the operator EOA
 (never from protected principal) and skips dust harvests and auctions by default
 when the ETH moved would not cover estimated Base gas (L2 execution plus OP-stack
-L1 data fee). Finalize of an expired auction is never skipped for dust.
+L1 data fee). Finalize of an expired auction is never skipped for dust. Recover
+of impaired principal is sent when simulation would increase Grave ETH (optional
+--min-recover-wei dust floor; default 0). The keeper does not execute strategy
+migration.
 
 Usage:
   node dist/index.js [once|watch] [flags]
@@ -30,6 +33,7 @@ Flags (env in parentheses):
   --min-harvest-wei     NETHER_MIN_HARVEST_WEI   default 0
   --min-auction-wei     NETHER_MIN_AUCTION_WEI   default 0
   --min-size-to-fee     NETHER_MIN_SIZE_TO_FEE   default 1 (0 disables the fee comparison)
+  --min-recover-wei     NETHER_MIN_RECOVER_WEI   default 0
   --gas-log             NETHER_GAS_LOG           default keeper-gas.jsonl
 `;
 
@@ -38,6 +42,7 @@ export function policyFromConfig(config: KeeperConfig): Policy {
     minSizeToFee: config.minSizeToFee,
     minHarvestWei: config.minHarvestWei,
     minAuctionWei: config.minAuctionWei,
+    minRecoverWei: config.minRecoverWei,
   };
 }
 

@@ -237,7 +237,7 @@ Address.sendValue(payable(recipient), unwrap)
 return unwrap
 ```
 
-Cap by realizable aToken balance. If Aave liquidity is insufficient, `withdraw` reverts: harvest reverts (no try/catch on Grave harvest); migration continues best-effort ([`NIP-0006`](0006-strategy.md) §8.3).
+Cap by realizable aToken balance. If Aave liquidity is insufficient, `withdraw` reverts: harvest reverts (no try/catch on Grave harvest); a migration execute records a failed pull and does not switch until `N` failures ([`NDR-0009`](../ndr/0009-impaired-strategy-capital.md), [`NIP-0012`](0012-impaired-strategy-capital.md)).
 
 Do not unwrap more than received. Do not send to `owner()` — there is none.
 
@@ -419,7 +419,7 @@ This section is the W5 risk artifact for the Aave V3 WETH adapter. It does not c
 
 **Smart-contract risk.** Aave Pool is a proxy. Governance may upgrade implementation, freeze the WETH reserve, change caps, or list new collateral in the same pool. Nether pins the Pool **proxy** address. An Aave bug or upgrade can lock or haircut supplier funds. Nether cannot pause Aave.
 
-**Liquidity / utilization.** Withdraw needs WETH cash in the reserve. High utilization reverts `withdraw` / harvest. Principal stays in aTokens (loss-recovery-first if NAV drops). Migration try/catches old `withdrawETH`. New deposits revert and sit idle on Grave.
+**Liquidity / utilization.** Withdraw needs WETH cash in the reserve. High utilization reverts `withdraw` / harvest. Principal stays in aTokens (loss-recovery-first on the **live** adapter if NAV drops below `requiredBacking`). A migration execute whose old `withdrawETH` reverts is a recorded failure toward `N`, not an immediate venue abandon ([`NIP-0012`](0012-impaired-strategy-capital.md)). New deposits revert and sit idle on Grave.
 
 **Supply cap / pause.** `depositETH` reverts; `bury()` still succeeds (idle ETH).
 

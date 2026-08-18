@@ -71,6 +71,16 @@ describe('loadConfig', () => {
     assert.equal(config.privateKey, KEY);
     assert.equal(config.chainId, 84532);
   });
+
+  it('defaults minRecoverWei to 0', () => {
+    const config = required(['--dry-run']);
+    assert.equal(config.minRecoverWei, 0n);
+  });
+
+  it('accepts --min-recover-wei', () => {
+    const config = required(['--dry-run', '--min-recover-wei', '12']);
+    assert.equal(config.minRecoverWei, 12n);
+  });
 });
 
 describe('resolveGasLogPath', () => {

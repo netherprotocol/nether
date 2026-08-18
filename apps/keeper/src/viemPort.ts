@@ -25,6 +25,7 @@ import {
   ExpectedRevertError,
   isExpectedRevert,
   type CrankAction,
+  type CrankCall,
   type FeeEstimate,
   type KeeperPort,
   type SimulateFail,
@@ -32,7 +33,7 @@ import {
   type TxReceiptInfo,
 } from './crank.js';
 import type { GasDetail } from './gasLog.js';
-import type { AuctionView, Snapshot } from './snapshot.js';
+import type { AuctionView, ImpairedEntry, Snapshot } from './snapshot.js';
 
 export const L1_FEE_PAD_MULTIPLIER = 2n;
 
@@ -78,9 +79,9 @@ export function createViemPort(config: KeeperConfig): KeeperPort & { publicClien
   return {
     publicClient,
     readSnapshot: () => readSnapshot(ctx),
-    simulate: (action) => simulateAction(ctx, action),
-    estimateFee: (action) => estimateActionFee(ctx, action),
-    send: (action) => sendAction(ctx, action),
+    simulate: (call) => simulateAction(ctx, call),
+    estimateFee: (call) => estimateActionFee(ctx, call),
+    send: (call) => sendAction(ctx, call),
   };
 }
 
@@ -121,6 +122,11 @@ async function readSnapshot(ctx: Clients): Promise<Snapshot> {
       { address: ctx.grave, abi: graveAbi, functionName: 'pendingStrategy' },
       { address: ctx.reaper, abi: reaperAbi, functionName: 'availableReaperETH' },
       { address: ctx.reaper, abi: reaperAbi, functionName: 'activeAuction' },
+      { address: ctx.grave, abi: graveAbi, functionName: 'requiredBacking' },
+      { address: ctx.grave, abi: graveAbi, functionName: 'impairedCapital' },
+      { address: ctx.grave, abi: graveAbi, functionName: 'impairedAdapterCount' },
+      { address: ctx.grave, abi: graveAbi, functionName: 'pendingWithdrawFailures' },
+      { address: ctx.grave, abi: graveAbi, functionName: 'lastMigrationFailureTime' },
     ],
   });
 
@@ -128,6 +134,12 @@ async function readSnapshot(ctx: Clients): Promise<Snapshot> {
   const nav = results[1];
   const harvestViewFailed = harvest?.status !== 'success';
   const navViewFailed = nav?.status !== 'success';
+  const protectedPrincipal = required<bigint>(results[2], 'protectedPrincipal');
+  const impairedCapital = required<bigint>(results[9], 'impairedCapital');
+  const requiredBacking =
+    results[8]?.status === 'success' ? (results[8].result as bigint) : protectedPrincipal - impairedCapital;
+  const impairedCount = required<bigint>(results[10], 'impairedAdapterCount');
+  const impairedAdapters = await readImpairedAdapters(ctx, blockNumber, impairedCount);
 
   const [reaperBalance, operatorBalance] = await Promise.all([
     ctx.publicClient.getBalance({ address: ctx.reaper, blockNumber }),
@@ -142,7 +154,12 @@ async function readSnapshot(ctx: Clients): Promise<Snapshot> {
     now: block.timestamp,
     harvestableYield: harvest?.status === 'success' ? harvest.result : 0n,
     currentNAV: nav?.status === 'success' ? nav.result : 0n,
-    protectedPrincipal: required(results[2], 'protectedPrincipal'),
+    protectedPrincipal,
+    requiredBacking,
+    impairedCapital,
+    impairedAdapters,
+    pendingWithdrawFailures: required(results[11], 'pendingWithdrawFailures'),
+    lastMigrationFailureTime: required(results[12], 'lastMigrationFailureTime'),
     activeStrategy: required(results[3], 'activeStrategy'),
     graveReaper: required(results[4], 'reaper'),
     ...pendingFrom(required(results[5], 'pendingStrategy')),
@@ -153,6 +170,42 @@ async function readSnapshot(ctx: Clients): Promise<Snapshot> {
     harvestViewFailed,
     navViewFailed,
   };
+}
+
+async function readImpairedAdapters(
+  ctx: Clients,
+  blockNumber: bigint,
+  count: bigint,
+): Promise<ImpairedEntry[]> {
+  if (count === 0n) {
+    return [];
+  }
+  const n = Number(count);
+  const atResults = await ctx.publicClient.multicall({
+    allowFailure: false,
+    blockNumber,
+    contracts: Array.from({ length: n }, (_, i) => ({
+      address: ctx.grave,
+      abi: graveAbi,
+      functionName: 'impairedAdapterAt' as const,
+      args: [BigInt(i)] as const,
+    })),
+  });
+  const adapters = atResults as Address[];
+  const owedResults = await ctx.publicClient.multicall({
+    allowFailure: false,
+    blockNumber,
+    contracts: adapters.map((adapter) => ({
+      address: ctx.grave,
+      abi: graveAbi,
+      functionName: 'impairedOwed' as const,
+      args: [adapter] as const,
+    })),
+  });
+  return adapters.map((adapter, i) => ({
+    adapter,
+    owed: owedResults[i] as bigint,
+  }));
 }
 
 function required<T>(item: { status: string; result?: unknown } | undefined, label: string): T {
@@ -199,9 +252,9 @@ function auctionFrom(raw: unknown): AuctionView {
   };
 }
 
-async function simulateAction(ctx: Clients, action: CrankAction): Promise<SimulateOk | SimulateFail> {
+async function simulateAction(ctx: Clients, call: CrankCall): Promise<SimulateOk | SimulateFail> {
   try {
-    if (action === 'harvest') {
+    if (call.action === 'harvest') {
       const { result } = await ctx.publicClient.simulateContract({
         account: ctx.account,
         address: ctx.grave,
@@ -210,7 +263,22 @@ async function simulateAction(ctx: Clients, action: CrankAction): Promise<Simula
       });
       return { ok: true, sizeWei: result, detail: { ethHarvested: result.toString() } };
     }
-    if (action === 'startAuction') {
+    if (call.action === 'recoverImpaired') {
+      const adapter = recoverAdapter(call);
+      const { result } = await ctx.publicClient.simulateContract({
+        account: ctx.account,
+        address: ctx.grave,
+        abi: graveAbi,
+        functionName: 'recoverImpaired',
+        args: [adapter],
+      });
+      return {
+        ok: true,
+        sizeWei: result,
+        detail: { adapter, ethReceived: result.toString() },
+      };
+    }
+    if (call.action === 'startAuction') {
       const { result } = await ctx.publicClient.simulateContract({
         account: ctx.account,
         address: ctx.reaper,
@@ -241,13 +309,13 @@ async function simulateAction(ctx: Clients, action: CrankAction): Promise<Simula
   }
 }
 
-async function estimateActionFee(ctx: Clients, action: CrankAction): Promise<FeeEstimate> {
-  const gasUsed = await estimateGas(ctx, action);
+async function estimateActionFee(ctx: Clients, call: CrankCall): Promise<FeeEstimate> {
+  const gasUsed = await estimateGas(ctx, call);
   const feePerGas = await maxFeePerGas(ctx.publicClient);
   const l2Fee = gasUsed * feePerGas;
   let l1Fee = 0n;
   try {
-    l1Fee = await estimateL1(ctx, action);
+    l1Fee = await estimateL1(ctx, call);
   } catch {
     l1Fee = l2Fee * (L1_FEE_PAD_MULTIPLIER - 1n);
   }
@@ -259,8 +327,8 @@ async function estimateActionFee(ctx: Clients, action: CrankAction): Promise<Fee
   };
 }
 
-async function estimateGas(ctx: Clients, action: CrankAction): Promise<bigint> {
-  if (action === 'harvest') {
+async function estimateGas(ctx: Clients, call: CrankCall): Promise<bigint> {
+  if (call.action === 'harvest') {
     return ctx.publicClient.estimateContractGas({
       account: ctx.account,
       address: ctx.grave,
@@ -268,7 +336,16 @@ async function estimateGas(ctx: Clients, action: CrankAction): Promise<bigint> {
       functionName: 'harvest',
     });
   }
-  if (action === 'startAuction') {
+  if (call.action === 'recoverImpaired') {
+    return ctx.publicClient.estimateContractGas({
+      account: ctx.account,
+      address: ctx.grave,
+      abi: graveAbi,
+      functionName: 'recoverImpaired',
+      args: [recoverAdapter(call)],
+    });
+  }
+  if (call.action === 'startAuction') {
     return ctx.publicClient.estimateContractGas({
       account: ctx.account,
       address: ctx.reaper,
@@ -284,8 +361,8 @@ async function estimateGas(ctx: Clients, action: CrankAction): Promise<bigint> {
   });
 }
 
-async function estimateL1(ctx: Clients, action: CrankAction): Promise<bigint> {
-  if (action === 'harvest') {
+async function estimateL1(ctx: Clients, call: CrankCall): Promise<bigint> {
+  if (call.action === 'harvest') {
     return estimateContractL1Fee(ctx.publicClient, {
       account: ctx.account,
       address: ctx.grave,
@@ -293,7 +370,16 @@ async function estimateL1(ctx: Clients, action: CrankAction): Promise<bigint> {
       functionName: 'harvest',
     });
   }
-  if (action === 'startAuction') {
+  if (call.action === 'recoverImpaired') {
+    return estimateContractL1Fee(ctx.publicClient, {
+      account: ctx.account,
+      address: ctx.grave,
+      abi: graveAbi,
+      functionName: 'recoverImpaired',
+      args: [recoverAdapter(call)],
+    });
+  }
+  if (call.action === 'startAuction') {
     return estimateContractL1Fee(ctx.publicClient, {
       account: ctx.account,
       address: ctx.reaper,
@@ -309,14 +395,14 @@ async function estimateL1(ctx: Clients, action: CrankAction): Promise<bigint> {
   });
 }
 
-async function writeAction(ctx: Clients, action: CrankAction): Promise<Hex> {
+async function writeAction(ctx: Clients, call: CrankCall): Promise<Hex> {
   const wallet = ctx.walletClient;
   if (!wallet) {
     throw new Error('Cannot send without an operator key');
   }
   const account = ctx.account;
   const chain = ctx.chain;
-  if (action === 'harvest') {
+  if (call.action === 'harvest') {
     return wallet.writeContract({
       account,
       chain,
@@ -325,7 +411,17 @@ async function writeAction(ctx: Clients, action: CrankAction): Promise<Hex> {
       functionName: 'harvest',
     });
   }
-  if (action === 'startAuction') {
+  if (call.action === 'recoverImpaired') {
+    return wallet.writeContract({
+      account,
+      chain,
+      address: ctx.grave,
+      abi: graveAbi,
+      functionName: 'recoverImpaired',
+      args: [recoverAdapter(call)],
+    });
+  }
+  if (call.action === 'startAuction') {
     return wallet.writeContract({
       account,
       chain,
@@ -343,13 +439,13 @@ async function writeAction(ctx: Clients, action: CrankAction): Promise<Hex> {
   });
 }
 
-async function sendAction(ctx: Clients, action: CrankAction): Promise<TxReceiptInfo> {
+async function sendAction(ctx: Clients, call: CrankCall): Promise<TxReceiptInfo> {
   if (!ctx.walletClient) {
     throw new Error('Cannot send without an operator key');
   }
   let hash: Hex;
   try {
-    hash = await writeAction(ctx, action);
+    hash = await writeAction(ctx, call);
   } catch (err) {
     const name = revertErrorName(err);
     if (name && isExpectedRevert(name)) {
@@ -360,7 +456,7 @@ async function sendAction(ctx: Clients, action: CrankAction): Promise<TxReceiptI
 
   const receipt = await ctx.publicClient.waitForTransactionReceipt({ hash });
   const l1Fee = l1FeeFromReceipt(receipt);
-  const detail = detailFromLogs(action, receipt.logs);
+  const detail = detailFromLogs(call.action, receipt.logs);
   return {
     tx: receipt.transactionHash,
     blockNumber: receipt.blockNumber,
@@ -370,6 +466,13 @@ async function sendAction(ctx: Clients, action: CrankAction): Promise<TxReceiptI
     status: receipt.status === 'reverted' ? 'reverted' : 'success',
     detail,
   };
+}
+
+function recoverAdapter(call: CrankCall): Address {
+  if (!call.adapter) {
+    throw new Error('recoverImpaired requires an adapter');
+  }
+  return call.adapter;
 }
 
 function l1FeeFromReceipt(receipt: TransactionReceipt): bigint {
@@ -385,6 +488,19 @@ function detailFromLogs(action: CrankAction, logs: Log[]): GasDetail {
       return {};
     }
     return { ethHarvested: log.args.ethAmount.toString() };
+  }
+  if (action === 'recoverImpaired') {
+    const parsed = parseEventLogs({ abi: graveAbi, logs, eventName: 'ImpairedRecovered' });
+    const log = parsed[0];
+    if (!log) {
+      return {};
+    }
+    return {
+      adapter: log.args.adapter,
+      ethReceived: log.args.received.toString(),
+      pay: log.args.pay.toString(),
+      impairedCapital: log.args.impairedCapital.toString(),
+    };
   }
   if (action === 'startAuction') {
     const parsed = parseEventLogs({ abi: reaperAbi, logs, eventName: 'ReapingStarted' });

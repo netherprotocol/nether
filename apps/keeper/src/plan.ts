@@ -1,10 +1,11 @@
-import { zeroAddress } from 'viem';
+import { zeroAddress, type Address } from 'viem';
 import { startableEth, type Snapshot } from './snapshot.js';
 
 export type Policy = {
   minSizeToFee: bigint;
   minHarvestWei: bigint;
   minAuctionWei: bigint;
+  minRecoverWei: bigint;
 };
 
 export type FeeEstimates = {
@@ -32,9 +33,16 @@ export type SkipReason =
 
 export type PlannedAction =
   | { kind: 'finalize'; reason: 'auction_expired' }
+  | { kind: 'recoverImpaired'; reason: 'impaired_owed'; adapter: Address; sizeWei: bigint }
   | { kind: 'harvest'; reason: 'harvestable_yield'; sizeWei: bigint }
   | { kind: 'start'; reason: 'startable_eth'; sizeWei: bigint }
-  | { kind: 'skip'; action: 'finalize' | 'harvest' | 'start'; reason: SkipReason; sizeWei?: bigint };
+  | {
+      kind: 'skip';
+      action: 'finalize' | 'harvest' | 'start' | 'recoverImpaired';
+      reason: SkipReason;
+      sizeWei?: bigint;
+      adapter?: Address;
+    };
 
 export function belowSizeFloor(
   sizeWei: bigint,
@@ -58,7 +66,7 @@ export function shouldHarvest(snapshot: Snapshot): boolean {
   if (snapshot.graveReaper === zeroAddress) {
     return false;
   }
-  if (snapshot.currentNAV < snapshot.protectedPrincipal) {
+  if (snapshot.currentNAV < snapshot.requiredBacking) {
     return false;
   }
   return snapshot.harvestableYield > 0n;
@@ -77,9 +85,20 @@ export function planTick(snapshot: Snapshot, fees: FeeEstimates, policy: Policy)
     actions.push({ kind: 'skip', action: 'finalize', reason: 'auction_not_expired' });
   }
 
+  for (const entry of snapshot.impairedAdapters) {
+    if (entry.owed > 0n) {
+      actions.push({
+        kind: 'recoverImpaired',
+        reason: 'impaired_owed',
+        adapter: entry.adapter,
+        sizeWei: entry.owed,
+      });
+    }
+  }
+
   if (snapshot.harvestViewFailed || snapshot.navViewFailed) {
     actions.push({ kind: 'skip', action: 'harvest', reason: 'harvest_view_failed' });
-  } else if (snapshot.currentNAV < snapshot.protectedPrincipal) {
+  } else if (snapshot.currentNAV < snapshot.requiredBacking) {
     actions.push({ kind: 'skip', action: 'harvest', reason: 'nav_below_principal' });
   } else if (snapshot.graveReaper === zeroAddress) {
     actions.push({ kind: 'skip', action: 'harvest', reason: 'reaper_not_set' });

@@ -20,6 +20,8 @@ describe('abi fragments', () => {
       assert.equal(blob.includes(forbidden), false, forbidden);
     }
     assert.equal(blob.includes('harvest'), true);
+    assert.equal(blob.includes('recoverImpaired'), true);
+    assert.equal(blob.includes('requiredBacking'), true);
     assert.equal(blob.includes('startAuction'), true);
     assert.equal(blob.includes('finalizeAuction'), true);
   });

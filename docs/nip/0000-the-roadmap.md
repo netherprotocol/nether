@@ -15,6 +15,7 @@
 - Landing: [`0002-landing-docs.md`](0002-landing-docs.md)
 - Grave dashboard: [`0010-grave-dashboard.md`](0010-grave-dashboard.md)
 - Wallet / bury / sell: [`0011-wallet-connect.md`](0011-wallet-connect.md)
+- Impaired strategy capital: [`0012-impaired-strategy-capital.md`](0012-impaired-strategy-capital.md)
 
 This document sequences implementation work. It does not change monetary rules, governance limits, or launch constraints. The spec wins on protocol behavior. This plan can be revised as work proceeds; do not freeze it as an NDR.
 
@@ -123,14 +124,14 @@ Internal breakdown:
 
 1. `IStrategyAdapter` exactly as specified (or equivalent, documented if the surface must differ — that difference needs an NDR).
 2. **Test invest adapter** (approved split): idle ETH or a scripted profit/loss adapter for unit, fuzz, and invariant tests so M0 does not depend on AAVE. Do not deploy it on mainnet (§18.2). Place it under `contracts/test/`, not `contracts/src/`.
-3. Protected-principal high-watermark accounting, `harvest()`, loss-recovery-first, donation/forced-ETH handling (§6.2–§6.3, §7, §16.2).
-4. Strategy scheduling, 14-day timelock, migration that routes recovered assets through the Grave into the new adapter, post-migration NAV check.
+3. Protected-principal high-watermark accounting, `harvest()`, loss-recovery-first on **active** capital vs `requiredBacking`, donation/forced-ETH handling (§6.2–§6.3, §7, §16.2). Impaired leftover capital after a failed migration withdraw is [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) / [`NIP-0012`](0012-impaired-strategy-capital.md).
+4. Strategy scheduling, 14-day timelock, migration that routes recovered assets through the Grave into the new adapter, bounded withdraw retries, then impaired list + permissionless recover, post-migration NAV check.
 5. No emergency pause on Grave or Reaper (spec §6.5 is MAY). Grave admin is strategy replacement only; investing pause, if any, lives on the adapter ([`NDR-0005`](../ndr/0005-strategy-security.md)).
 6. Multisig-capable admin using existing audited Base infrastructure where possible; production ownership must leave the deployer EOA (§10.2, §18). Do not renounce at launch.
 
 Admin authority is strategy replacement (timelocked) only. It is not upgradeability of NETH, Grave, or Reaper, and it is not pause of harvest or Reaper auctions.
 
-[`NIP-0006`](0006-strategy.md) keeps the strategy slot on Grave (no separate `StrategyManager`), uses `Ownable2Step` plus an embedded 14-day delay, one-time `setReaper`, harvest that sends ETH immediately to Reaper, and a test-only invest adapter under `contracts/test/mocks/`. No pause on Grave or Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).
+[`NIP-0006`](0006-strategy.md) keeps the strategy slot on Grave (no separate `StrategyManager`), uses `Ownable2Step` plus an embedded 14-day delay, one-time `setReaper`, harvest that sends ETH immediately to Reaper, and a test-only invest adapter under `contracts/test/mocks/`. No pause on Grave or Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)). Migration withdraw retries, `impairedCapital`, and `recoverImpaired` are [`NIP-0012`](0012-impaired-strategy-capital.md) ([`NDR-0009`](../ndr/0009-impaired-strategy-capital.md)).
 
 ### W5 — Initial production strategy (Aave V3 WETH)
 
@@ -181,6 +182,7 @@ Keeper loop (minimum):
 - harvest when harvestable yield is realizable
 - start a Reaper auction when ETH is available and none is active
 - finalize expired auctions
+- recover impaired capital from listed former adapters when a simulated pull would increase Grave ETH ([`NIP-0012`](0012-impaired-strategy-capital.md); keeper still does not `executeStrategyMigration`)
 
 The keeper lives under `apps/keeper/` with its own environment. It is a cross-platform Node + TypeScript console app using `viem`, reusing the web toolchain majors from [`NDR-0003`](../ndr/0003-frontend-stack.md) (Node 22, TypeScript 5.9.3, npm) without extending that NDR’s freeze to Gravekeeper. Paid calls are view-checked, simulated, and skipped when the moved ETH is not worth Base gas (including OP-stack L1 fee). Operator gas is logged. No keeper-stack NDR in this slice ([`NIP-0009`](0009-grave-keeper.md)).
 
@@ -236,6 +238,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | This plan | Living NIP. Adjust on demand. Do not copy it into an NDR. |
 | Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. W2 plan: [`NIP-0004`](0004-grave.md). W4 plan: [`NIP-0006`](0006-strategy.md). |
 | Strategy replacement security | v1: owner + 14-day delay, no Grave/Reaper pause; later safer adapter then `owner → 0`. [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). |
+| Impaired strategy capital | Bounded retries then impair leftover ETH; harvest vs `requiredBacking`; permissionless recover. [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) (Accepted). Plan: [`NIP-0012`](0012-impaired-strategy-capital.md) (Implemented). |
 
 Nearby setup authority that is *not* monetary upgradeability, and is already in the spec:
 
@@ -253,6 +256,7 @@ Do not accept these until the question is actually being decided. A Proposed rec
 | Compiler / OZ / Foundry version freeze | M2 (can wait until late M0) | Spec §18.3. Draft: [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (Proposed) |
 | `IStrategyAdapter` surface change, if any | W4 | Only if the spec interface is insufficient |
 | Strategy replacement security (owner theft vs later proxy) | W4 locked; later NIP for the proxy | [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). Not the W5 venue NDR |
+| Impaired leftover capital after failed migration withdraw | W4 amendment | [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) (Accepted). Plan: [`NIP-0012`](0012-impaired-strategy-capital.md) (Implemented) |
 | Initial production strategy (Aave V3 WETH) | W5 | Venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). Pool lookup [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md) (Accepted). Plan: [`NIP-0007`](0007-aave-adapter.md) (Implemented) |
 | Frontend framework | W7 landing | [`NDR-0003`](../ndr/0003-frontend-stack.md) (Accepted). Plan: [`NIP-0002`](0002-landing-docs.md) |
 | Indexer | W8 | Still TBD; live views can use §12 + RPC without one |
@@ -269,7 +273,8 @@ W0 scaffold
      ├─ W2 Grave ([`NIP-0004`](0004-grave.md); era math library → bury → reckoning / EraCompleted → idle ETH)
      │    └─ W4 strategy interface, harvest, timelock, test invest adapter ([`NIP-0006`](0006-strategy.md))
      │         └─ W5 production adapter ([`NIP-0007`](0007-aave-adapter.md); [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md))
-     │              └─ M0 e2e fork ([`NIP-0008`](0008-e2e-fork-suite.md); live WETH9 + Aave family lifecycle)
+     │              ├─ M0 e2e fork ([`NIP-0008`](0008-e2e-fork-suite.md); live WETH9 + Aave family lifecycle)
+     │              └─ impaired capital ([`NIP-0012`](0012-impaired-strategy-capital.md); [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md); Grave only, then keeper/dashboard)
      └─ W3 Reaper ([`NIP-0005`](0005-reaper.md); can overlap W2 once NETH exists)
             └─ W4 harvest credits Reaper (no pause of auction creation)
 

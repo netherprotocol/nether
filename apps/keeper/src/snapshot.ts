@@ -9,6 +9,11 @@ export type AuctionView = {
   active: boolean;
 };
 
+export type ImpairedEntry = {
+  adapter: Address;
+  owed: bigint;
+};
+
 export type Snapshot = {
   chainId: number;
   blockNumber: bigint;
@@ -16,6 +21,11 @@ export type Snapshot = {
   harvestableYield: bigint;
   currentNAV: bigint;
   protectedPrincipal: bigint;
+  requiredBacking: bigint;
+  impairedCapital: bigint;
+  impairedAdapters: ImpairedEntry[];
+  pendingWithdrawFailures: bigint;
+  lastMigrationFailureTime: bigint;
   activeStrategy: Address;
   graveReaper: Address;
   pendingAdapter: Address;

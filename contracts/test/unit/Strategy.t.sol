@@ -206,6 +206,29 @@ contract RoundingDustAdapter is IStrategyAdapter {
     }
 }
 
+contract RecoverReenteringAdapter is IStrategyAdapter {
+    Grave public grave;
+
+    function setGrave(Grave grave_) external {
+        grave = grave_;
+    }
+
+    function depositETH() external payable {}
+
+    function withdrawETH(uint256, address) external returns (uint256) {
+        grave.recoverImpaired(address(this));
+        return 0;
+    }
+
+    function totalAssetsInETH() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    function underlying() external pure returns (address) {
+        return address(0);
+    }
+}
+
 contract ReenteringReaper {
     Grave public grave;
     bool public attack;
@@ -245,6 +268,13 @@ contract StrategyTest is Test {
         address indexed oldStrategy, address indexed newStrategy, uint256 navBefore, uint256 navAfter
     );
     event StrategyMigrationCancelled(address indexed oldStrategy, address indexed newStrategy);
+    event StrategyMigrationWithdrawFailed(
+        address indexed oldStrategy, address indexed newStrategy, uint256 attempt, bytes reason
+    );
+    event StrategyImpaired(
+        address indexed oldStrategy, address indexed newStrategy, uint256 impairedDelta, uint256 impairedCapital
+    );
+    event ImpairedRecovered(address indexed adapter, uint256 received, uint256 pay, uint256 impairedCapital);
 
     function setUp() public {
         setter = makeAddr("setter");
@@ -278,6 +308,25 @@ contract StrategyTest is Test {
         grave.executeStrategyMigration();
     }
 
+    function _retryExecute() internal {
+        uint256 last = grave.lastMigrationFailureTime();
+        if (last != 0) {
+            vm.warp(last + grave.STRATEGY_MIGRATION_RETRY_DELAY());
+        }
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+    }
+
+    function _impairCurrent(address next) internal {
+        vm.prank(admin);
+        grave.scheduleStrategy(next);
+        vm.warp(block.timestamp + 14 days);
+        uint256 n = grave.STRATEGY_MIGRATION_WITHDRAW_FAILURE_LIMIT();
+        for (uint256 i; i < n; ++i) {
+            _retryExecute();
+        }
+    }
+
     function _bury(address who, uint256 amount) internal returns (uint256 nethOut) {
         vm.prank(who);
         nethOut = grave.bury{value: amount}(0);
@@ -291,6 +340,11 @@ contract StrategyTest is Test {
         assertEq(pending, address(0));
         assertEq(executeAfter, 0);
         assertEq(grave.STRATEGY_CHANGE_DELAY(), 14 days);
+        assertEq(grave.STRATEGY_MIGRATION_WITHDRAW_FAILURE_LIMIT(), 3);
+        assertEq(grave.STRATEGY_MIGRATION_RETRY_DELAY(), 1 days);
+        assertEq(grave.impairedCapital(), 0);
+        assertEq(grave.requiredBacking(), 0);
+        assertEq(grave.impairedAdapterCount(), 0);
     }
 
     function test_pausedAbsentOnGraveNethReaper() public {
@@ -739,11 +793,14 @@ contract StrategyTest is Test {
         vm.prank(admin);
         grave.scheduleStrategy(address(adapter2));
         vm.warp(block.timestamp + 14 days);
-        vm.prank(admin);
-        grave.executeStrategyMigration();
+        _retryExecute();
+        _retryExecute();
+        _retryExecute();
         assertLt(grave.currentNAV(), navBefore);
         assertEq(grave.currentNAV(), 2 ether);
         assertEq(grave.protectedPrincipal(), 2 ether);
+        assertEq(grave.impairedCapital(), 0);
+        assertEq(grave.activeStrategy(), address(adapter2));
     }
 
     function test_revertingOldWithdrawContinuesAndOwnerUnchanged() public {
@@ -757,14 +814,43 @@ contract StrategyTest is Test {
         vm.prank(admin);
         grave.scheduleStrategy(address(next));
         vm.warp(block.timestamp + 14 days);
+
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(stuck));
+        assertEq(grave.pendingWithdrawFailures(), 1);
+        assertEq(address(stuck).balance, 2 ether);
+        assertEq(next.totalAssetsInETH(), 0);
+        assertEq(admin.balance, adminBefore);
+
+        uint256 retryAfter = grave.lastMigrationFailureTime() + 1 days;
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(Grave.StrategyMigrationRetryDelayNotElapsed.selector, retryAfter));
+        grave.executeStrategyMigration();
+
+        vm.warp(retryAfter);
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(stuck));
+        assertEq(grave.pendingWithdrawFailures(), 2);
+
+        vm.warp(grave.lastMigrationFailureTime() + 1 days);
         vm.prank(admin);
         grave.executeStrategyMigration();
 
         assertEq(grave.activeStrategy(), address(next));
         assertEq(address(stuck).balance, 2 ether);
         assertEq(next.totalAssetsInETH(), 0);
+        assertEq(grave.impairedCapital(), 2 ether);
+        assertEq(grave.impairedOwed(address(stuck)), 2 ether);
+        assertEq(grave.impairedAdapterCount(), 1);
+        assertEq(grave.impairedAdapterAt(0), address(stuck));
+        assertEq(grave.requiredBacking(), 0);
         assertLt(grave.currentNAV(), grave.protectedPrincipal());
         assertEq(admin.balance, adminBefore);
+        (address pending,) = grave.pendingStrategy();
+        assertEq(pending, address(0));
+        assertEq(grave.pendingWithdrawFailures(), 0);
     }
 
     function test_executeUsesScheduledAddressNotAnother() public {
@@ -794,12 +880,15 @@ contract StrategyTest is Test {
         grave.scheduleStrategy(address(next));
         vm.warp(block.timestamp + 14 days);
         uint256 adminBefore = admin.balance;
-        vm.prank(admin);
-        grave.executeStrategyMigration();
+        _retryExecute();
+        assertEq(grave.activeStrategy(), address(broken));
+        _retryExecute();
+        _retryExecute();
         assertEq(grave.activeStrategy(), address(next));
         assertEq(admin.balance, adminBefore);
-        assertEq(next.totalAssetsInETH(), 0.5 ether);
-        assertEq(address(broken).balance, 1 ether);
+        assertEq(next.totalAssetsInETH(), 1.5 ether);
+        assertEq(address(broken).balance, 0);
+        assertEq(grave.impairedCapital(), 0);
     }
 
     function test_thiefAdapterDoesNotPayOwner() public {
@@ -829,6 +918,344 @@ contract StrategyTest is Test {
     function test_adapterConstructorRejectsZero() public {
         vm.expectRevert(TestInvestAdapter.ZeroAddress.selector);
         new TestInvestAdapter(address(0));
+    }
+
+    function test_fullPullMigratesOnceWithoutImpair() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 3 ether);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(next));
+        vm.warp(block.timestamp + 14 days);
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(next));
+        assertEq(grave.impairedCapital(), 0);
+        assertEq(grave.impairedAdapterCount(), 0);
+        assertEq(grave.pendingWithdrawFailures(), 0);
+        assertEq(next.totalAssetsInETH(), 3 ether);
+    }
+
+    function test_twoFailuresThenSuccessfulPullDoesNotImpair() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(next));
+        vm.warp(block.timestamp + 14 days);
+        _retryExecute();
+        _retryExecute();
+        assertEq(grave.activeStrategy(), address(adapter));
+        assertEq(grave.pendingWithdrawFailures(), 2);
+        adapter.setWithdrawRevert(false);
+        _retryExecute();
+        assertEq(grave.activeStrategy(), address(next));
+        assertEq(grave.impairedCapital(), 0);
+        assertEq(grave.impairedAdapterCount(), 0);
+        assertEq(next.totalAssetsInETH(), 2 ether);
+    }
+
+    function test_cancelAfterFailuresClearsBudgetAndRestartsClock() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        TestInvestAdapter later = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 1 ether);
+        adapter.setWithdrawRevert(true);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(next));
+        vm.warp(block.timestamp + 14 days);
+        _retryExecute();
+        assertEq(grave.pendingWithdrawFailures(), 1);
+        uint256 impairedBefore = grave.impairedCapital();
+        vm.prank(admin);
+        grave.cancelScheduledStrategy();
+        (address pending,) = grave.pendingStrategy();
+        assertEq(pending, address(0));
+        assertEq(grave.pendingWithdrawFailures(), 0);
+        assertEq(grave.lastMigrationFailureTime(), 0);
+        assertEq(grave.impairedCapital(), impairedBefore);
+        uint256 t1 = block.timestamp;
+        vm.prank(admin);
+        grave.scheduleStrategy(address(later));
+        (, uint256 executeAfter) = grave.pendingStrategy();
+        assertEq(executeAfter, t1 + 14 days);
+        assertEq(grave.pendingWithdrawFailures(), 0);
+    }
+
+    function test_zeroPayNonRevertIsFailedPull() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setRealizable(0);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(next));
+        vm.warp(block.timestamp + 14 days);
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(adapter));
+        assertEq(grave.pendingWithdrawFailures(), 1);
+        assertEq(address(adapter).balance, 2 ether);
+        assertEq(address(grave).balance, 0);
+    }
+
+    function test_partialPayStaysIdleUntilLaterExecute() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setRealizable(0.5 ether);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(next));
+        vm.warp(block.timestamp + 14 days);
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(adapter));
+        assertEq(address(grave).balance, 0.5 ether);
+        assertEq(address(adapter).balance, 1.5 ether);
+        adapter.setRealizable(type(uint256).max);
+        _retryExecute();
+        assertEq(grave.activeStrategy(), address(next));
+        assertEq(grave.impairedCapital(), 0);
+        assertEq(next.totalAssetsInETH(), 2 ether);
+        assertEq(address(grave).balance, 0);
+    }
+
+    function test_impairUsesObservedActiveNotOldReportedNav() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setReportedNav(100 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        assertEq(grave.activeStrategy(), address(next));
+        assertEq(grave.impairedCapital(), 2 ether);
+        assertEq(grave.impairedOwed(address(adapter)), 2 ether);
+        assertEq(grave.requiredBacking(), 0);
+    }
+
+    function test_deltaZeroSwitchesWithoutListing() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        vm.prank(bob);
+        (bool ok,) = address(grave).call{value: 2 ether}("");
+        assertTrue(ok);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        assertEq(grave.activeStrategy(), address(next));
+        assertEq(grave.impairedCapital(), 0);
+        assertEq(grave.impairedAdapterCount(), 0);
+        assertEq(next.totalAssetsInETH(), 2 ether);
+        assertEq(address(adapter).balance, 2 ether);
+    }
+
+    function test_secondImpairmentAddsOwedSameListEntry() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        TestInvestAdapter third = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        assertEq(grave.impairedOwed(address(adapter)), 2 ether);
+        assertEq(grave.impairedAdapterCount(), 1);
+
+        _bury(bob, 1 ether);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(adapter));
+        vm.warp(block.timestamp + 14 days);
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(adapter));
+
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(third));
+        assertEq(grave.impairedAdapterCount(), 1);
+        assertEq(grave.impairedAdapterAt(0), address(adapter));
+        assertEq(grave.impairedOwed(address(adapter)), 3 ether);
+        assertEq(grave.impairedCapital(), 3 ether);
+    }
+
+    function test_buryAfterImpairDoesNotReduceImpairedOrHarvestable() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        uint256 harvestable = grave.harvestableYield();
+        uint256 impaired = grave.impairedCapital();
+        _bury(bob, 1 ether);
+        assertEq(grave.protectedPrincipal(), 3 ether);
+        assertEq(grave.impairedCapital(), impaired);
+        assertEq(grave.impairedOwed(address(adapter)), 2 ether);
+        assertEq(grave.harvestableYield(), harvestable);
+        assertEq(grave.requiredBacking(), 1 ether);
+    }
+
+    function test_liveLossAfterImpairUsesRequiredBacking() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        _bury(bob, 2 ether);
+        assertEq(grave.requiredBacking(), 2 ether);
+        next.simulateLoss(1 ether);
+        assertEq(grave.harvestableYield(), 0);
+        vm.expectRevert(Grave.NoHarvestableYield.selector);
+        grave.harvest();
+        next.simulateProfit{value: 1.5 ether}();
+        assertEq(grave.harvestableYield(), 0.5 ether);
+        uint256 harvested = grave.harvest();
+        assertEq(harvested, 0.5 ether);
+        assertEq(reaper.totalHarvestedETH(), 0.5 ether);
+        assertEq(grave.protectedPrincipal(), 4 ether);
+        assertEq(grave.impairedCapital(), 2 ether);
+        assertGe(grave.currentNAV(), grave.requiredBacking());
+        assertLt(grave.currentNAV(), grave.protectedPrincipal());
+    }
+
+    function test_recoverUnknownReverts() public {
+        vm.expectRevert(Grave.AdapterNotImpaired.selector);
+        grave.recoverImpaired(address(adapter));
+    }
+
+    function test_recoverRevertLeavesOwedAndList() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        RevertingWithdrawAdapter stuck = new RevertingWithdrawAdapter(address(grave));
+        _activate(address(stuck));
+        _bury(alice, 2 ether);
+        _impairCurrent(address(next));
+        vm.expectRevert(bytes("withdraw"));
+        grave.recoverImpaired(address(stuck));
+        assertEq(grave.impairedOwed(address(stuck)), 2 ether);
+        assertEq(grave.impairedAdapterCount(), 1);
+        assertEq(grave.impairedAdapterAt(0), address(stuck));
+    }
+
+    function test_recoverZeroPayRevertsWithoutDropping() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        adapter.setWithdrawRevert(false);
+        adapter.setRealizable(0);
+        vm.expectRevert(Grave.ZeroRecover.selector);
+        grave.recoverImpaired(address(adapter));
+        assertEq(grave.impairedOwed(address(adapter)), 2 ether);
+        assertEq(grave.impairedAdapterCount(), 1);
+    }
+
+    function test_partialRecoverLeavesAdapterListed() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        adapter.setWithdrawRevert(false);
+        adapter.setRealizable(0.75 ether);
+        uint256 received = grave.recoverImpaired(address(adapter));
+        assertEq(received, 0.75 ether);
+        assertEq(grave.impairedOwed(address(adapter)), 1.25 ether);
+        assertEq(grave.impairedCapital(), 1.25 ether);
+        assertEq(grave.impairedAdapterCount(), 1);
+        assertEq(grave.impairedAdapterAt(0), address(adapter));
+        assertEq(next.totalAssetsInETH(), 0.75 ether);
+    }
+
+    function test_fullRecoverRemovesAdapter() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        adapter.setWithdrawRevert(false);
+        uint256 adminBefore = admin.balance;
+        uint256 received = grave.recoverImpaired(address(adapter));
+        assertEq(received, 2 ether);
+        assertEq(grave.impairedOwed(address(adapter)), 0);
+        assertEq(grave.impairedCapital(), 0);
+        assertEq(grave.impairedAdapterCount(), 0);
+        assertEq(next.totalAssetsInETH(), 2 ether);
+        assertEq(admin.balance, adminBefore);
+        assertEq(grave.requiredBacking(), 2 ether);
+        assertEq(grave.harvestableYield(), 0);
+    }
+
+    function test_recoverSurplusDoesNotReduceOtherDebt() public {
+        TestInvestAdapter other = new TestInvestAdapter(address(grave));
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+
+        _activate(address(other));
+        other.setWithdrawRevert(true);
+        _bury(bob, 1 ether);
+        TestInvestAdapter third = new TestInvestAdapter(address(grave));
+        _impairCurrent(address(third));
+        assertEq(grave.impairedAdapterCount(), 2);
+
+        adapter.setWithdrawRevert(false);
+        vm.deal(address(adapter), address(adapter).balance + 1 ether);
+        uint256 otherOwed = grave.impairedOwed(address(other));
+        uint256 received = grave.recoverImpaired(address(adapter));
+        assertEq(received, 3 ether);
+        assertEq(grave.impairedOwed(address(adapter)), 0);
+        assertEq(grave.impairedOwed(address(other)), otherOwed);
+        assertEq(grave.impairedAdapterCount(), 1);
+        assertEq(grave.impairedAdapterAt(0), address(other));
+    }
+
+    function test_recoverIdleWhenActiveDepositReverts() public {
+        RevertingDepositAdapter next = new RevertingDepositAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        adapter.setWithdrawRevert(false);
+        vm.expectEmit(true, false, false, true, address(grave));
+        emit StrategyDepositFailed(
+            address(next), 2 ether, abi.encodeWithSelector(RevertingDepositAdapter.DepositRejected.selector)
+        );
+        uint256 received = grave.recoverImpaired(address(adapter));
+        assertEq(received, 2 ether);
+        assertEq(address(grave).balance, 2 ether);
+        assertEq(address(next).balance, 0);
+        assertEq(grave.impairedCapital(), 0);
+    }
+
+    function test_recoverReentrancyFails() public {
+        RecoverReenteringAdapter stuck = new RecoverReenteringAdapter();
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        stuck.setGrave(grave);
+        _activate(address(stuck));
+        _bury(alice, 1 ether);
+        _impairCurrent(address(next));
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        grave.recoverImpaired(address(stuck));
+        assertEq(grave.impairedOwed(address(stuck)), 1 ether);
+        assertEq(grave.impairedAdapterCount(), 1);
+    }
+
+    function test_harvestAfterRecoverDoesNotTreatPrincipalAsYield() public {
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        _activate(address(adapter));
+        _bury(alice, 2 ether);
+        adapter.setWithdrawRevert(true);
+        _impairCurrent(address(next));
+        adapter.setWithdrawRevert(false);
+        grave.recoverImpaired(address(adapter));
+        assertEq(grave.harvestableYield(), 0);
+        vm.expectRevert(Grave.NoHarvestableYield.selector);
+        grave.harvest();
+        next.simulateProfit{value: 0.2 ether}();
+        uint256 harvested = grave.harvest();
+        assertEq(harvested, 0.2 ether);
+        assertEq(grave.protectedPrincipal(), 2 ether);
+        assertEq(grave.impairedCapital(), 0);
+        assertGe(grave.currentNAV(), grave.requiredBacking());
     }
 
     function test_startAuctionWorksWithoutGravePause() public {
