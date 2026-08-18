@@ -12,11 +12,14 @@ import {
   SECONDARY_CTA,
   SITE_DESCRIPTION,
   SITE_TITLE,
+  SOCIAL_IMAGE_FILE,
+  SOCIAL_IMAGE_HEIGHT,
+  SOCIAL_IMAGE_WIDTH,
   withBase,
 } from '../lib/site';
 
 const learnHref = withBase('learn');
-const heroSrc = withBase('hero.png');
+const heroSrc = withBase(SOCIAL_IMAGE_FILE);
 ---
 
 <Layout title={SITE_TITLE} description={SITE_DESCRIPTION} surface="holder">
@@ -54,8 +57,8 @@ const heroSrc = withBase('hero.png');
         <img
           src={heroSrc}
           alt=""
-          width="1122"
-          height="1402"
+          width={SOCIAL_IMAGE_WIDTH}
+          height={SOCIAL_IMAGE_HEIGHT}
           class="relative z-10 mx-auto block h-auto w-full object-contain md:absolute md:inset-0 md:h-full md:w-full"
         />
       </div>
