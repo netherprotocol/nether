@@ -375,4 +375,22 @@ contract AaveV3WethAdapterGraveTest is Test {
         assertEq(pool.aToken().balanceOf(address(adapter)), 0);
         assertEq(admin.balance, adminBefore);
     }
+
+    function test_revertingAaveWithdrawIsRecordedFailureNotSwitch() public {
+        _activate(address(adapter));
+        vm.prank(alice);
+        grave.bury{value: 1 ether}(0);
+        TestInvestAdapter next = new TestInvestAdapter(address(grave));
+        pool.setWithdrawReverts(true);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(next));
+        vm.warp(block.timestamp + 14 days);
+        vm.prank(admin);
+        grave.executeStrategyMigration();
+        assertEq(grave.activeStrategy(), address(adapter));
+        assertEq(grave.pendingWithdrawFailures(), 1);
+        assertEq(pool.aToken().balanceOf(address(adapter)), 1 ether);
+        assertEq(address(next).balance, 0);
+        assertEq(grave.impairedCapital(), 0);
+    }
 }

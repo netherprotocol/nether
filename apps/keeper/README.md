@@ -1,6 +1,6 @@
 # apps/keeper
 
-Gravekeeper console cranker ([`NIP-0009`](../../docs/nip/0009-grave-keeper.md)). Permissionless `harvest()`, `startAuction()`, and `finalizeAuction()` from an operator EOA. The bot pays its own gas and skips dust harvests and auctions by default.
+Gravekeeper console cranker ([`NIP-0009`](../../docs/nip/0009-grave-keeper.md), recover path in [`NIP-0012`](../../docs/nip/0012-impaired-strategy-capital.md)). Permissionless `harvest()`, `recoverImpaired()`, `startAuction()`, and `finalizeAuction()` from an operator EOA. The bot pays its own gas and skips dust harvests and auctions by default. Recovered principal is not dust-skipped unless `--min-recover-wei` is set.
 
 Requires Node 22. Run commands from `apps/keeper/`.
 

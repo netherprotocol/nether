@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export type CrankAction = 'harvest' | 'startAuction' | 'finalizeAuction';
+export type CrankAction = 'harvest' | 'startAuction' | 'finalizeAuction' | 'recoverImpaired';
 
 export type GasDetail = Record<string, string>;
 

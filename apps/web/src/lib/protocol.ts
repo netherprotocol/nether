@@ -24,9 +24,19 @@ export type AuctionSnapshot = {
   active: boolean;
 };
 
+export type ImpairedAdapter = {
+  adapter: Address;
+  owed: bigint;
+};
+
 export type ProtocolSnapshot = {
   now: bigint;
   protectedPrincipal: bigint;
+  requiredBacking: bigint;
+  impairedCapital: bigint;
+  impairedAdapters: ImpairedAdapter[];
+  pendingWithdrawFailures: bigint;
+  lastMigrationFailureTime: bigint;
   nethSupply: bigint;
   currentEra: bigint;
   currentEraBuried: bigint;
@@ -88,12 +98,23 @@ export async function readSnapshot(
         { address: contracts.reaper, abi: reaperAbi, functionName: 'currentReaperRate' },
         { address: contracts.reaper, abi: reaperAbi, functionName: 'totalNethReaped' },
         { address: contracts.reaper, abi: reaperAbi, functionName: 'totalHarvestedETH' },
+        { address: contracts.grave, abi: graveAbi, functionName: 'requiredBacking' },
+        { address: contracts.grave, abi: graveAbi, functionName: 'impairedCapital' },
+        { address: contracts.grave, abi: graveAbi, functionName: 'impairedAdapterCount' },
+        { address: contracts.grave, abi: graveAbi, functionName: 'pendingWithdrawFailures' },
+        { address: contracts.grave, abi: graveAbi, functionName: 'lastMigrationFailureTime' },
       ],
     }),
   ]);
 
   const pending = required(results[9], 'pendingStrategy');
   const { adapter, executeAfter } = pendingFrom(pending);
+  const protectedPrincipal = required<bigint>(results[5], 'protectedPrincipal');
+  const impairedCapital = optionalBig(results[17], 0n);
+  const requiredBacking =
+    results[16]?.status === 'success' ? (results[16].result as bigint) : protectedPrincipal - impairedCapital;
+  const impairedCount = optionalBig(results[18], 0n);
+  const impairedAdapters = await readImpairedAdapters(client, contracts.grave, impairedCount);
 
   return {
     now: block.timestamp,
@@ -102,7 +123,12 @@ export async function readSnapshot(
     currentEraCapacity: required(results[2], 'currentEraCapacity'),
     currentRewardRate: required(results[3], 'currentRewardRate'),
     quoteBuryOneEth: required(results[4], 'quoteBury'),
-    protectedPrincipal: required(results[5], 'protectedPrincipal'),
+    protectedPrincipal,
+    requiredBacking,
+    impairedCapital,
+    impairedAdapters,
+    pendingWithdrawFailures: optionalBig(results[19], 0n),
+    lastMigrationFailureTime: optionalBig(results[20], 0n),
     currentNAV: required(results[6], 'currentNAV'),
     harvestableYield: required(results[7], 'harvestableYield'),
     activeStrategy: required(results[8], 'activeStrategy'),
@@ -161,6 +187,55 @@ export async function quoteReaperAmount(
     }
     throw error;
   }
+}
+
+function optionalBig(item: { status: string; result?: unknown } | undefined, fallback: bigint): bigint {
+  if (!item || item.status !== 'success') {
+    return fallback;
+  }
+  return item.result as bigint;
+}
+
+async function readImpairedAdapters(
+  client: PoolClient,
+  grave: Address,
+  count: bigint,
+): Promise<ImpairedAdapter[]> {
+  if (count === 0n) {
+    return [];
+  }
+  const n = Number(count);
+  const atResults = await client.multicall({
+    allowFailure: true,
+    contracts: Array.from({ length: n }, (_, i) => ({
+      address: grave,
+      abi: graveAbi,
+      functionName: 'impairedAdapterAt' as const,
+      args: [BigInt(i)] as const,
+    })),
+  });
+  const adapters: Address[] = [];
+  for (const item of atResults) {
+    if (item.status === 'success') {
+      adapters.push(item.result as Address);
+    }
+  }
+  if (adapters.length === 0) {
+    return [];
+  }
+  const owedResults = await client.multicall({
+    allowFailure: true,
+    contracts: adapters.map((adapter) => ({
+      address: grave,
+      abi: graveAbi,
+      functionName: 'impairedOwed' as const,
+      args: [adapter] as const,
+    })),
+  });
+  return adapters.map((adapter, i) => ({
+    adapter,
+    owed: owedResults[i]?.status === 'success' ? (owedResults[i].result as bigint) : 0n,
+  }));
 }
 
 function required<T>(item: { status: string; result?: unknown } | undefined, label: string): T {

@@ -9,7 +9,7 @@
 - Prior slice: [`NIP-0002`](0002-landing-docs.md) (holder + docs)
 - Visual reference: attached **The SOL Grave** dashboard screenshot, with the Nether-specific exceptions in §4
 - No NDR in this slice
-- Impaired capital display: [`NIP-0012`](0012-impaired-strategy-capital.md) (Planned; [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md))
+- Impaired capital display: [`NIP-0012`](0012-impaired-strategy-capital.md) (Implemented; [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md))
 
 This plan is the second public frontend slice: a live Grave / Reaper / NETH monitoring page on the existing Astro static site. It reads spec §12 views from Base Sepolia. It does **not** send `bury`, `sellToReaper`, or wallet transactions. Those stay stubs until [`NIP-0011`](0011-wallet-connect.md).
 
@@ -278,7 +278,7 @@ Grave:
 - `currentEra`, `currentEraBuried`, `currentEraCapacity`, `currentRewardRate`
 - `quoteBury(uint256)`
 - `protectedPrincipal`, `currentNAV`, `harvestableYield`
-- `requiredBacking`, `impairedCapital`, impaired adapter list / owed (when [`NIP-0012`](0012-impaired-strategy-capital.md) is implemented)
+- `requiredBacking`, `impairedCapital`, impaired adapter list / owed (see [`NIP-0012`](0012-impaired-strategy-capital.md))
 - `activeStrategy`, `pendingStrategy`
 
 NETH:

@@ -6,7 +6,7 @@
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Frontend toolchain to reuse: Accepted [`NDR-0003`](../ndr/0003-frontend-stack.md) (TypeScript / Node / npm; not the Astro site)
-- Harvest / recover: [`NIP-0012`](../nip/0012-impaired-strategy-capital.md) (Planned; [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md))
+- Harvest / recover: [`NIP-0012`](../nip/0012-impaired-strategy-capital.md) (Implemented; [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md))
 - License: [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md) (app tree: `"private": true`; no SPDX required beyond that unless a later docs change says otherwise)
 
 This plan is the W8 Gravekeeper breakdown. It does not change era math, harvest rules, Reaper economics, or contract ABIs except as later required by [`NIP-0012`](0012-impaired-strategy-capital.md). The spec wins if anything below disagrees.

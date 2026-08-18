@@ -9,9 +9,13 @@ contract TestInvestAdapter is IStrategyAdapter {
 
     uint256 public reportedNav = type(uint256).max;
     uint256 public realizable = type(uint256).max;
+    bool public withdrawRevert;
+    bool public navRevert;
 
     error ZeroAddress();
     error NotGrave();
+    error WithdrawRejected();
+    error NavRejected();
 
     constructor(address grave_) {
         if (grave_ == address(0)) {
@@ -30,6 +34,9 @@ contract TestInvestAdapter is IStrategyAdapter {
         if (msg.sender != grave) {
             revert NotGrave();
         }
+        if (withdrawRevert) {
+            revert WithdrawRejected();
+        }
         uint256 cap = address(this).balance;
         if (realizable < cap) {
             cap = realizable;
@@ -41,6 +48,9 @@ contract TestInvestAdapter is IStrategyAdapter {
     }
 
     function totalAssetsInETH() external view returns (uint256) {
+        if (navRevert) {
+            revert NavRejected();
+        }
         if (reportedNav == type(uint256).max) {
             return address(this).balance;
         }
@@ -57,6 +67,14 @@ contract TestInvestAdapter is IStrategyAdapter {
 
     function setRealizable(uint256 amount) external {
         realizable = amount;
+    }
+
+    function setWithdrawRevert(bool enabled) external {
+        withdrawRevert = enabled;
+    }
+
+    function setNavRevert(bool enabled) external {
+        navRevert = enabled;
     }
 
     function simulateProfit() external payable {}

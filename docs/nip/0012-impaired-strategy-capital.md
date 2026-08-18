@@ -1,6 +1,6 @@
 # NIP-0012: Impaired strategy capital after failed migration withdraw
 
-- Status: Planned
+- Status: Implemented
 - Date: 2026-08-17
 - Workstream: W4 amendment (Grave accounting + migration execute); W8 keeper recover; W7 dashboard views
 - Roadmap: [`0000-the-roadmap.md`](0000-the-roadmap.md)
@@ -11,9 +11,7 @@
 
 This plan is how to implement [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) with the smallest change to contracts already shipped. It does not reopen burial finality, era math, Reaper economics, the 14-day replacement delay, one active adapter (spec §20), or admin `withdraw` of principal ([`NDR-0005`](../ndr/0005-strategy-security.md)).
 
-The spec and this NIP are the follow-up NDR-0009 required before code. **Do not change Solidity, keeper, or dashboard in the change that only adds these docs.** Implement when this NIP is explicitly started.
-
-Until then, production `Grave.executeStrategyMigration` still matches the old [`NIP-0006`](0006-strategy.md) best-effort switch. That is a documented gap: spec + NDR-0009 win; this NIP sequences the fix.
+The spec and this NIP are the follow-up NDR-0009 required before code. Production `Grave.executeStrategyMigration` records failed pulls, impairs leftover capital after `N` failures, and exposes `recoverImpaired`.
 
 ## 1. Purpose
 

@@ -7,7 +7,7 @@
 - Source of truth: [`protocol_spec.md`](../protocol_spec.md)
 - Working versions: Proposed [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (not accepted)
 - Strategy admin: Accepted [`NDR-0005`](../ndr/0005-strategy-security.md)
-- Harvest watermark and migration execute: amended by Accepted [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md). Implementation: [`NIP-0012`](0012-impaired-strategy-capital.md) (Planned). Until that NIP starts, shipped `Grave.sol` still best-effort switches on a failed withdraw.
+- Harvest watermark and migration execute: amended by Accepted [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md). Implementation: [`NIP-0012`](0012-impaired-strategy-capital.md) (Implemented).
 - License: [`NDR-0004`](../ndr/0004-source-available-until-mainnet.md) (`SPDX-License-Identifier: UNLICENSED`)
 
 This plan is the W4 breakdown. It implements spec §6.2–§6.5, §7, §10–§11, and the harvest / strategy views and events in §12–§13. It does not implement a production adapter, deploy scripts, a DEX, or pause on Grave/Reaper ([`NDR-0005`](../ndr/0005-strategy-security.md)).

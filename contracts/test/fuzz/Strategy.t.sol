@@ -77,11 +77,12 @@ contract StrategyFuzzTest is Test {
         }
         uint256 idleBefore = address(grave).balance;
         uint256 principal = grave.protectedPrincipal();
-        uint256 reserved = idleBefore < principal ? idleBefore : principal;
+        uint256 req = grave.requiredBacking();
+        uint256 reserved = idleBefore < req ? idleBefore : req;
         try grave.harvest() returns (uint256 ethHarvested) {
             assertEq(grave.protectedPrincipal(), principal);
             assertEq(address(grave).balance, reserved);
-            assertGe(grave.currentNAV(), principal);
+            assertGe(grave.currentNAV(), req);
             assertGt(ethHarvested, 0);
         } catch {
             assertEq(address(grave).balance, idleBefore);
@@ -105,13 +106,14 @@ contract StrategyFuzzTest is Test {
         }
         uint256 idleBefore = address(grave).balance;
         uint256 principal = grave.protectedPrincipal();
-        uint256 reserved = idleBefore < principal ? idleBefore : principal;
+        uint256 req = grave.requiredBacking();
+        uint256 reserved = idleBefore < req ? idleBefore : req;
         uint256 adminBefore = admin.balance;
         try grave.harvest() returns (uint256 ethHarvested) {
             assertEq(grave.protectedPrincipal(), principal);
             assertEq(address(grave).balance, reserved);
             assertEq(admin.balance, adminBefore);
-            uint256 idleSurplus = idleBefore > principal ? idleBefore - principal : 0;
+            uint256 idleSurplus = idleBefore > req ? idleBefore - req : 0;
             uint256 adapterPaid = ethHarvested - idleSurplus;
             assertLe(adapterPaid, realizable);
             assertLe(ethHarvested, idleSurplus + realizable);
@@ -265,7 +267,35 @@ contract StrategyFuzzTest is Test {
         vm.prank(alice);
         try reaper.sellToReaper(nethIn, 0) {} catch {}
         assertEq(grave.protectedPrincipal(), principal);
-        assertGe(grave.currentNAV(), principal);
+        assertGe(grave.currentNAV(), grave.requiredBacking());
+    }
+
+    function testFuzz_recoverDoesNotPayOwner(uint256 amount) public {
+        amount = bound(amount, 1, 10 ether);
+        _activate(address(adapter));
+        vm.prank(alice);
+        grave.bury{value: amount}(0);
+        adapter.setWithdrawRevert(true);
+        vm.prank(admin);
+        grave.scheduleStrategy(address(adapter2));
+        vm.warp(block.timestamp + 14 days);
+        for (uint256 i; i < 3; ++i) {
+            if (i > 0) {
+                vm.warp(grave.lastMigrationFailureTime() + 1 days);
+            }
+            vm.prank(admin);
+            grave.executeStrategyMigration();
+        }
+        assertEq(grave.impairedOwed(address(adapter)), amount);
+        adapter.setWithdrawRevert(false);
+        uint256 adminBefore = admin.balance;
+        uint256 impairedBefore = grave.impairedCapital();
+        grave.recoverImpaired(address(adapter));
+        assertEq(admin.balance, adminBefore);
+        assertEq(grave.impairedCapital(), 0);
+        assertLt(grave.impairedCapital(), impairedBefore);
+        assertEq(grave.impairedAdapterCount(), 0);
+        assertEq(neth.balanceOf(admin), 0);
     }
 
     function testFuzz_nonOwnerScheduleReverts(address caller) public {

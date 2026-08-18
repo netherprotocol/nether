@@ -12,6 +12,11 @@ import {
 const SAMPLE: ProtocolSnapshot = {
   now: 1_700_000_000n,
   protectedPrincipal: 10n ** 18n,
+  requiredBacking: 8n * 10n ** 17n,
+  impairedCapital: 2n * 10n ** 17n,
+  impairedAdapters: [{ adapter: '0x2222222222222222222222222222222222222222', owed: 2n * 10n ** 17n }],
+  pendingWithdrawFailures: 1n,
+  lastMigrationFailureTime: 1_700_000_000n,
   nethSupply: 50n * 10n ** 18n,
   currentEra: 0n,
   currentEraBuried: 10n ** 17n,
@@ -43,6 +48,21 @@ describe('snapshot cache', () => {
   it('round-trips bigint fields through JSON strings', () => {
     const restored = deserializeSnapshot(serializeSnapshot(SAMPLE));
     assert.deepEqual(restored, SAMPLE);
+  });
+
+  it('fills missing impaired fields from older cache payloads', () => {
+    const legacy = serializeSnapshot(SAMPLE) as Record<string, unknown>;
+    delete legacy.requiredBacking;
+    delete legacy.impairedCapital;
+    delete legacy.impairedAdapters;
+    delete legacy.pendingWithdrawFailures;
+    delete legacy.lastMigrationFailureTime;
+    const restored = deserializeSnapshot(legacy);
+    assert.equal(restored?.requiredBacking, SAMPLE.protectedPrincipal);
+    assert.equal(restored?.impairedCapital, 0n);
+    assert.deepEqual(restored?.impairedAdapters, []);
+    assert.equal(restored?.pendingWithdrawFailures, 0n);
+    assert.equal(restored?.lastMigrationFailureTime, 0n);
   });
 
   it('rejects corrupt payloads', () => {

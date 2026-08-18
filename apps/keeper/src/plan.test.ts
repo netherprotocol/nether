@@ -11,6 +11,7 @@ const policy: Policy = {
   minSizeToFee: 1n,
   minHarvestWei: 0n,
   minAuctionWei: 0n,
+  minRecoverWei: 0n,
 };
 
 function snap(over: Partial<Snapshot> = {}): Snapshot {
@@ -24,13 +25,20 @@ function snap(over: Partial<Snapshot> = {}): Snapshot {
     ...over.auction,
   };
   const { auction: _ignored, ...rest } = over;
+  const protectedPrincipal = rest.protectedPrincipal ?? 10n ** 18n;
+  const impairedCapital = rest.impairedCapital ?? 0n;
   return {
     chainId: 8453,
     blockNumber: 1n,
     now: 1_000_000n,
     harvestableYield: 0n,
     currentNAV: 10n ** 18n,
-    protectedPrincipal: 10n ** 18n,
+    protectedPrincipal,
+    requiredBacking: rest.requiredBacking ?? protectedPrincipal - impairedCapital,
+    impairedCapital,
+    impairedAdapters: [],
+    pendingWithdrawFailures: 0n,
+    lastMigrationFailureTime: 0n,
     activeStrategy: STRATEGY,
     graveReaper: REAPER,
     pendingAdapter: zeroAddress,
@@ -150,14 +158,45 @@ describe('planTick', () => {
     assert.deepEqual(sends(snapshot, fees), ['finalize']);
   });
 
-  it('does not harvest when currentNAV is below protectedPrincipal', () => {
+  it('does not harvest when currentNAV is below requiredBacking', () => {
     const snapshot = snap({
       harvestableYield: 1n,
       currentNAV: 1n,
       protectedPrincipal: 2n,
+      impairedCapital: 0n,
+      requiredBacking: 2n,
     });
     assert.equal(shouldHarvest(snapshot), false);
     assert.equal(skipReason(snapshot, 'harvest'), 'nav_below_principal');
+  });
+
+  it('harvests when NAV is below protectedPrincipal but at or above requiredBacking', () => {
+    const snapshot = snap({
+      harvestableYield: 1_000n,
+      currentNAV: 6n * 10n ** 17n + 1_000n,
+      protectedPrincipal: 10n ** 18n,
+      impairedCapital: 4n * 10n ** 17n,
+      requiredBacking: 6n * 10n ** 17n,
+    });
+    assert.equal(shouldHarvest(snapshot), true);
+    assert.ok(sends(snapshot).includes('harvest'));
+  });
+
+  it('plans recoverImpaired for each listed adapter before harvest', () => {
+    const first = '0x00000000000000000000000000000000000000aa' as Address;
+    const second = '0x00000000000000000000000000000000000000bb' as Address;
+    const snapshot = snap({
+      harvestableYield: 1_000n,
+      currentNAV: 6n * 10n ** 17n + 1_000n,
+      protectedPrincipal: 10n ** 18n,
+      impairedCapital: 4n * 10n ** 17n,
+      requiredBacking: 6n * 10n ** 17n,
+      impairedAdapters: [
+        { adapter: first, owed: 3n * 10n ** 17n },
+        { adapter: second, owed: 1n * 10n ** 17n },
+      ],
+    });
+    assert.deepEqual(sends(snapshot), ['recoverImpaired', 'recoverImpaired', 'harvest']);
   });
 
   it('still proposes harvest for a lost-race style snapshot', () => {

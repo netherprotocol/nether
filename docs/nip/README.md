@@ -38,4 +38,4 @@ docs/nip/
 | [0009](0009-grave-keeper.md) | Grave Keeper (cranker) | Implemented |
 | [0010](0010-grave-dashboard.md) | Grave dashboard (monitoring slice) | Implemented |
 | [0011](0011-wallet-connect.md) | Wallet connect, bury, and Reaper actions | Implemented |
-| [0012](0012-impaired-strategy-capital.md) | Impaired strategy capital after failed migration withdraw | Planned |
+| [0012](0012-impaired-strategy-capital.md) | Impaired strategy capital after failed migration withdraw | Implemented |

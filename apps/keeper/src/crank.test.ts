@@ -7,6 +7,7 @@ import { zeroAddress, type Address } from 'viem';
 import {
   ExpectedRevertError,
   runTick,
+  type CrankCall,
   type CrankState,
   type FeeEstimate,
   type KeeperPort,
@@ -26,6 +27,7 @@ const policy: Policy = {
   minSizeToFee: 1n,
   minHarvestWei: 0n,
   minAuctionWei: 0n,
+  minRecoverWei: 0n,
 };
 
 const defaultFee: FeeEstimate = {
@@ -46,13 +48,20 @@ function snap(over: Partial<Snapshot> = {}): Snapshot {
     ...over.auction,
   };
   const { auction: _ignored, ...rest } = over;
+  const protectedPrincipal = rest.protectedPrincipal ?? 10n ** 18n;
+  const impairedCapital = rest.impairedCapital ?? 0n;
   return {
     chainId: 8453,
     blockNumber: 1n,
     now: 1_000_000n,
     harvestableYield: 0n,
     currentNAV: 10n ** 18n,
-    protectedPrincipal: 10n ** 18n,
+    protectedPrincipal,
+    requiredBacking: rest.requiredBacking ?? protectedPrincipal - impairedCapital,
+    impairedCapital,
+    impairedAdapters: [],
+    pendingWithdrawFailures: 0n,
+    lastMigrationFailureTime: 0n,
     activeStrategy: STRATEGY,
     graveReaper: REAPER,
     pendingAdapter: zeroAddress,
@@ -71,8 +80,10 @@ class StubPort implements KeeperPort {
   snapshot: Snapshot;
   sent: CrankAction[] = [];
   simulateMap: Partial<Record<CrankAction, SimulateOk | SimulateFail>> = {};
+  recoverSimulates: Record<string, SimulateOk | SimulateFail> = {};
   fees: Partial<Record<CrankAction, FeeEstimate>> = {};
   sendErrors: Partial<Record<CrankAction, string>> = {};
+  recoverSendErrors: Record<string, string> = {};
   receipts: Partial<Record<CrankAction, TxReceiptInfo>> = {};
 
   constructor(snapshot: Snapshot) {
@@ -83,16 +94,33 @@ class StubPort implements KeeperPort {
     return this.snapshot;
   }
 
-  async simulate(action: CrankAction): Promise<SimulateOk | SimulateFail> {
-    const mapped = this.simulateMap[action];
+  async simulate(call: CrankCall): Promise<SimulateOk | SimulateFail> {
+    if (call.action === 'recoverImpaired' && call.adapter) {
+      const mapped = this.recoverSimulates[call.adapter.toLowerCase()];
+      if (mapped) {
+        return mapped;
+      }
+    }
+    const mapped = this.simulateMap[call.action];
     if (mapped) {
       return mapped;
     }
-    if (action === 'harvest') {
+    if (call.action === 'harvest') {
       const sizeWei = this.snapshot.harvestableYield;
       return { ok: true, sizeWei, detail: { ethHarvested: sizeWei.toString() } };
     }
-    if (action === 'startAuction') {
+    if (call.action === 'recoverImpaired') {
+      const adapter = call.adapter;
+      const entry = this.snapshot.impairedAdapters.find(
+        (item) => item.adapter.toLowerCase() === adapter?.toLowerCase(),
+      );
+      const sizeWei = entry?.owed ?? 0n;
+      if (sizeWei === 0n) {
+        return { ok: false, errorName: 'AdapterNotImpaired', message: 'AdapterNotImpaired', expected: true };
+      }
+      return { ok: true, sizeWei, detail: { adapter: adapter ?? '', ethReceived: sizeWei.toString() } };
+    }
+    if (call.action === 'startAuction') {
       return { ok: true, sizeWei: 1_000n, detail: { auctionId: '1' } };
     }
     return {
@@ -107,17 +135,18 @@ class StubPort implements KeeperPort {
     };
   }
 
-  async estimateFee(action: CrankAction): Promise<FeeEstimate> {
-    return this.fees[action] ?? defaultFee;
+  async estimateFee(call: CrankCall): Promise<FeeEstimate> {
+    return this.fees[call.action] ?? defaultFee;
   }
 
-  async send(action: CrankAction): Promise<TxReceiptInfo> {
-    this.sent.push(action);
-    const err = this.sendErrors[action];
+  async send(call: CrankCall): Promise<TxReceiptInfo> {
+    this.sent.push(call.action);
+    const recoverErr = call.adapter ? this.recoverSendErrors[call.adapter.toLowerCase()] : undefined;
+    const err = recoverErr ?? this.sendErrors[call.action];
     if (err) {
       throw new ExpectedRevertError(err);
     }
-    if (action === 'finalizeAuction') {
+    if (call.action === 'finalizeAuction') {
       const rolled = this.snapshot.auction.ethRemaining;
       this.snapshot = {
         ...this.snapshot,
@@ -126,7 +155,7 @@ class StubPort implements KeeperPort {
         auction: { ...this.snapshot.auction, active: false, ethRemaining: 0n },
       };
     }
-    if (action === 'harvest') {
+    if (call.action === 'harvest') {
       const harvested = this.snapshot.harvestableYield;
       this.snapshot = {
         ...this.snapshot,
@@ -136,7 +165,23 @@ class StubPort implements KeeperPort {
         reaperBalance: this.snapshot.reaperBalance + harvested,
       };
     }
-    if (action === 'startAuction') {
+    if (call.action === 'recoverImpaired' && call.adapter) {
+      const adapter = call.adapter;
+      const entry = this.snapshot.impairedAdapters.find(
+        (item) => item.adapter.toLowerCase() === adapter.toLowerCase(),
+      );
+      const pay = entry?.owed ?? 0n;
+      this.snapshot = {
+        ...this.snapshot,
+        impairedCapital: this.snapshot.impairedCapital - pay,
+        requiredBacking: this.snapshot.requiredBacking + pay,
+        currentNAV: this.snapshot.currentNAV + pay,
+        impairedAdapters: this.snapshot.impairedAdapters.filter(
+          (item) => item.adapter.toLowerCase() !== adapter.toLowerCase(),
+        ),
+      };
+    }
+    if (call.action === 'startAuction') {
       const budget = this.snapshot.availableReaperETH +
         (this.snapshot.reaperBalance > this.snapshot.availableReaperETH
           ? this.snapshot.reaperBalance - this.snapshot.availableReaperETH
@@ -155,7 +200,7 @@ class StubPort implements KeeperPort {
       };
     }
     return (
-      this.receipts[action] ?? {
+      this.receipts[call.action] ?? {
         tx: `0x${'ab'.repeat(32)}`,
         blockNumber: 10n,
         gasUsed: 10n,
@@ -283,5 +328,80 @@ describe('runTick', () => {
     assert.deepEqual(port.sent, ['harvest']);
     assert.equal(attempts[0]?.outcome, 'skip');
     assert.equal(attempts[0]?.skipReason, 'revert:NoHarvestableYield');
+  });
+
+  it('recovers listed adapters before harvest and continues after a failed recover', async () => {
+    const first = '0x00000000000000000000000000000000000000aa' as Address;
+    const second = '0x00000000000000000000000000000000000000bb' as Address;
+    const port = new StubPort(
+      snap({
+        harvestableYield: 1_000n,
+        currentNAV: 6n * 10n ** 17n + 1_000n,
+        protectedPrincipal: 10n ** 18n,
+        impairedCapital: 4n * 10n ** 17n,
+        requiredBacking: 6n * 10n ** 17n,
+        impairedAdapters: [
+          { adapter: first, owed: 3n * 10n ** 17n },
+          { adapter: second, owed: 1n * 10n ** 17n },
+        ],
+      }),
+    );
+    port.recoverSimulates[first.toLowerCase()] = {
+      ok: false,
+      errorName: 'ZeroRecover',
+      message: 'ZeroRecover',
+      expected: true,
+    };
+    const { attempts, gasLog } = await tick(port);
+    assert.deepEqual(port.sent, ['recoverImpaired', 'harvest']);
+    assert.equal(
+      attempts.find((item) => item.action === 'recoverImpaired' && item.adapter === first)?.skipReason,
+      'revert:ZeroRecover',
+    );
+    assert.equal(
+      attempts.find((item) => item.action === 'recoverImpaired' && item.adapter === second)?.outcome,
+      'sent',
+    );
+    assert.equal(attempts.find((item) => item.action === 'harvest')?.outcome, 'sent');
+    assert.equal(
+      records(gasLog).some((row) => row.action === 'recoverImpaired' && row.sent),
+      true,
+    );
+  });
+
+  it('does not send recoverImpaired when simulation would not increase Grave ETH', async () => {
+    const adapter = '0x00000000000000000000000000000000000000aa' as Address;
+    const port = new StubPort(
+      snap({
+        impairedCapital: 1n,
+        requiredBacking: 10n ** 18n - 1n,
+        impairedAdapters: [{ adapter, owed: 1n }],
+      }),
+    );
+    port.recoverSimulates[adapter.toLowerCase()] = {
+      ok: true,
+      sizeWei: 0n,
+      detail: { adapter, ethReceived: '0' },
+    };
+    const { attempts } = await tick(port);
+    assert.deepEqual(port.sent, []);
+    assert.equal(
+      attempts.find((item) => item.action === 'recoverImpaired')?.skipReason,
+      'no_eth_increase',
+    );
+  });
+
+  it('skips recover dust against minRecoverWei without applying the harvest fee floor', async () => {
+    const adapter = '0x00000000000000000000000000000000000000aa' as Address;
+    const port = new StubPort(
+      snap({
+        impairedCapital: 50n,
+        requiredBacking: 10n ** 18n - 50n,
+        impairedAdapters: [{ adapter, owed: 50n }],
+      }),
+    );
+    const { attempts } = await tick(port, { policy: { ...policy, minRecoverWei: 100n } });
+    assert.deepEqual(port.sent, []);
+    assert.equal(attempts.find((item) => item.action === 'recoverImpaired')?.skipReason, 'below_min_recover');
   });
 });

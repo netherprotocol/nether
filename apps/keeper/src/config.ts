@@ -24,6 +24,7 @@ export type KeeperConfig = {
   minHarvestWei: bigint;
   minAuctionWei: bigint;
   minSizeToFee: bigint;
+  minRecoverWei: bigint;
   gasLog: string;
 };
 
@@ -58,6 +59,7 @@ export function loadConfig(argv: string[], env: Env = process.env): KeeperConfig
         'min-harvest-wei': { type: 'string' },
         'min-auction-wei': { type: 'string' },
         'min-size-to-fee': { type: 'string' },
+        'min-recover-wei': { type: 'string' },
         'gas-log': { type: 'string' },
         help: { type: 'boolean', short: 'h', default: false },
       },
@@ -84,6 +86,7 @@ export function loadConfig(argv: string[], env: Env = process.env): KeeperConfig
       minHarvestWei: 0n,
       minAuctionWei: 0n,
       minSizeToFee: 1n,
+      minRecoverWei: 0n,
       gasLog: resolveGasLogPath(DEFAULT_GAS_LOG),
     };
   }
@@ -106,6 +109,7 @@ export function loadConfig(argv: string[], env: Env = process.env): KeeperConfig
   const minHarvestRaw = values['min-harvest-wei'] ?? env.NETHER_MIN_HARVEST_WEI;
   const minAuctionRaw = values['min-auction-wei'] ?? env.NETHER_MIN_AUCTION_WEI;
   const minSizeRaw = values['min-size-to-fee'] ?? env.NETHER_MIN_SIZE_TO_FEE;
+  const minRecoverRaw = values['min-recover-wei'] ?? env.NETHER_MIN_RECOVER_WEI;
   const gasLogRaw = values['gas-log'] ?? env.NETHER_GAS_LOG ?? DEFAULT_GAS_LOG;
 
   if (!rpcUrl) {
@@ -146,6 +150,7 @@ export function loadConfig(argv: string[], env: Env = process.env): KeeperConfig
     minHarvestWei: parseBig(minHarvestRaw, 'min-harvest-wei', 0n),
     minAuctionWei: parseBig(minAuctionRaw, 'min-auction-wei', 0n),
     minSizeToFee: parseBig(minSizeRaw, 'min-size-to-fee', 1n),
+    minRecoverWei: parseBig(minRecoverRaw, 'min-recover-wei', 0n),
     gasLog: resolveGasLogPath(gasLogRaw),
   };
 }

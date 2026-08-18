@@ -238,7 +238,7 @@ These answers are from review of the draft. They are recorded here so the plan s
 | This plan | Living NIP. Adjust on demand. Do not copy it into an NDR. |
 | Extra splits | Era math library (W2) and test invest adapter (W4) are in scope. W2 plan: [`NIP-0004`](0004-grave.md). W4 plan: [`NIP-0006`](0006-strategy.md). |
 | Strategy replacement security | v1: owner + 14-day delay, no Grave/Reaper pause; later safer adapter then `owner → 0`. [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). |
-| Impaired strategy capital | Bounded retries then impair leftover ETH; harvest vs `requiredBacking`; permissionless recover. [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) (Accepted). Plan: [`NIP-0012`](0012-impaired-strategy-capital.md) (Planned). |
+| Impaired strategy capital | Bounded retries then impair leftover ETH; harvest vs `requiredBacking`; permissionless recover. [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) (Accepted). Plan: [`NIP-0012`](0012-impaired-strategy-capital.md) (Implemented). |
 
 Nearby setup authority that is *not* monetary upgradeability, and is already in the spec:
 
@@ -256,7 +256,7 @@ Do not accept these until the question is actually being decided. A Proposed rec
 | Compiler / OZ / Foundry version freeze | M2 (can wait until late M0) | Spec §18.3. Draft: [`NDR-0002`](../ndr/0002-toolchain-version-freeze.md) (Proposed) |
 | `IStrategyAdapter` surface change, if any | W4 | Only if the spec interface is insufficient |
 | Strategy replacement security (owner theft vs later proxy) | W4 locked; later NIP for the proxy | [`NDR-0005`](../ndr/0005-strategy-security.md) (Accepted). Not the W5 venue NDR |
-| Impaired leftover capital after failed migration withdraw | W4 amendment | [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) (Accepted). Plan: [`NIP-0012`](0012-impaired-strategy-capital.md) (Planned) |
+| Impaired leftover capital after failed migration withdraw | W4 amendment | [`NDR-0009`](../ndr/0009-impaired-strategy-capital.md) (Accepted). Plan: [`NIP-0012`](0012-impaired-strategy-capital.md) (Implemented) |
 | Initial production strategy (Aave V3 WETH) | W5 | Venue [`NDR-0006`](../ndr/0006-aave-v3-weth-adapter.md) (Accepted). Pool lookup [`NDR-0007`](../ndr/0007-aave-pool-via-provider.md) (Accepted). Plan: [`NIP-0007`](0007-aave-adapter.md) (Implemented) |
 | Frontend framework | W7 landing | [`NDR-0003`](../ndr/0003-frontend-stack.md) (Accepted). Plan: [`NIP-0002`](0002-landing-docs.md) |
 | Indexer | W8 | Still TBD; live views can use §12 + RPC without one |
