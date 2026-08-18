@@ -1,14 +1,16 @@
-import { BookOpen, Code2, Landmark } from 'lucide-react';
+import { BookOpen, Code2, GraduationCap, Landmark } from 'lucide-react';
 import { GITHUB_REPO_URL, withBase } from '../../lib/site.ts';
 import { ConnectButton } from '../wallet/ConnectButton.tsx';
 
 export function MobileDock() {
-  const graveHref = withBase('grave');
+  const learnHref = withBase('learn');
+  const appHref = withBase('grave');
   const docsHref = withBase('docs');
   const items = [
-    { href: graveHref, label: 'Grave', icon: Landmark, current: true },
+    { href: learnHref, label: 'Learn', icon: GraduationCap, current: false },
+    { href: appHref, label: 'App', icon: Landmark, current: true },
     { href: docsHref, label: 'Docs', icon: BookOpen, current: false },
-    { href: GITHUB_REPO_URL, label: 'Source', icon: Code2, current: false, external: true },
+    { href: GITHUB_REPO_URL, label: 'GitHub', icon: Code2, current: false, external: true },
   ] as const;
 
   return (
@@ -20,7 +22,7 @@ export function MobileDock() {
         {items.map((item) => {
           const Icon = item.icon;
           const className = [
-            'flex min-w-[3.4rem] flex-col items-center gap-1 px-2 py-1 text-[0.55rem] tracking-[0.14em] uppercase',
+            'flex min-w-[2.7rem] flex-col items-center gap-1 px-1.5 py-1 text-[0.52rem] tracking-[0.12em] uppercase',
             item.current ? 'text-accent' : 'text-muted',
           ].join(' ');
           if ('external' in item && item.external) {
@@ -34,6 +36,7 @@ export function MobileDock() {
               >
                 <Icon className="h-5 w-5" strokeWidth={1.4} aria-hidden="true" />
                 {item.label}
+                <span className="sr-only">(opens in a new tab)</span>
               </a>
             );
           }

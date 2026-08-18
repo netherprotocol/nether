@@ -1,0 +1,786 @@
+---
+import Layout from '../layouts/Layout.astro';
+import GraveCta from '../components/GraveCta.astro';
+import Callout from '../components/learn/Callout.astro';
+import FaqItem from '../components/learn/FaqItem.astro';
+import ContractDirectory from '../components/learn/ContractDirectory.astro';
+import ArrowDownToLine from '@lucide/astro/icons/arrow-down-to-line';
+import Landmark from '@lucide/astro/icons/landmark';
+import Skull from '@lucide/astro/icons/skull';
+import Hourglass from '@lucide/astro/icons/hourglass';
+import BookOpen from '@lucide/astro/icons/book-open';
+import FolderGit2 from '@lucide/astro/icons/folder-git-2';
+import FileCode from '@lucide/astro/icons/file-code';
+import Library from '@lucide/astro/icons/library';
+import ExternalLink from '@lucide/astro/icons/external-link';
+import {
+  AUDIT_REPORTS,
+  ERA_TABLE,
+  HAS_PROTOCOL_PRESALE,
+  OFFICIAL_MARKETS,
+  formatLearnNumber,
+  hasIndependentProductionAudit,
+} from '../lib/learn';
+import { GITHUB_REPO_URL, withBase } from '../lib/site';
+
+const docsHref = withBase('docs');
+const specHref = withBase('docs/protocol-spec');
+const ndrHref = withBase('docs/ndr');
+const nipHref = withBase('docs/nip');
+const audited = hasIndependentProductionAudit();
+const productionReports = AUDIT_REPORTS.filter((report) => report.independentProduction);
+const otherReports = AUDIT_REPORTS.filter((report) => !report.independentProduction);
+
+const title = 'Understand Nether — Learn';
+const description =
+  'Bury ETH forever. Receive NETH. The Grave puts permanent capital to work, and what it earns feeds the Reaper.';
+
+const howItWorks = [
+  {
+    icon: ArrowDownToLine,
+    title: 'Bury',
+    lead: 'You send ETH into the Grave.',
+    body: "The transaction is permanent. In return, the protocol mints NETH according to the current era's burial rate.",
+  },
+  {
+    icon: Landmark,
+    title: 'Grave',
+    lead: 'The ETH stays protocol capital forever.',
+    body: 'The Grave can deploy this protected capital into an approved ETH-denominated yield strategy. The strategy may change, but the ownership rule does not: protected principal cannot be withdrawn by users or administrators.',
+  },
+  {
+    icon: Skull,
+    title: 'Reap',
+    lead: 'Yield above protected principal goes to the Reaper.',
+    body: 'The Reaper uses that ETH in a seven-day reverse Dutch auction where NETH holders may sell NETH to the protocol. NETH acquired by the Reaper is immediately burned.',
+  },
+  {
+    icon: Hourglass,
+    title: 'Reckoning',
+    lead: 'As more ETH is buried, NETH issuance becomes harder.',
+    body: 'Each era has twice the ETH capacity of the previous era and half the NETH reward per ETH. Every completed era therefore issues the same gross amount: 10,000,000 NETH before Reaper burns.',
+  },
+] as const;
+
+const risks = [
+  {
+    title: 'Irreversibility',
+    body: 'Buried ETH cannot be withdrawn. A mistaken burial transaction cannot be reversed by the team.',
+  },
+  {
+    title: 'NETH market risk',
+    body: 'NETH has no guaranteed price, peg, floor, or redemption value. It may lose substantial or all market value.',
+  },
+  {
+    title: 'Smart-contract risk',
+    body: 'Bugs, exploits, unexpected interactions, or implementation mistakes may cause losses.',
+  },
+  {
+    title: 'Strategy risk',
+    body: 'The Grave deploys capital into an external ETH-denominated strategy. Strategy contracts, integrations, underlying protocols, or asset mechanics may fail.',
+  },
+  {
+    title: 'Economic-model risk',
+    body: 'The Reaper and issuance system may not produce sustainable market demand for NETH.',
+  },
+  {
+    title: 'Blockchain and third-party risk',
+    body: 'Base, wallets, RPC providers, external protocols, or other dependencies may fail or behave unexpectedly.',
+  },
+] as const;
+
+const verifyCards = [
+  {
+    href: specHref,
+    icon: BookOpen,
+    title: 'Protocol Specification',
+    body: 'Exact monetary and security rules.',
+    external: false,
+  },
+  {
+    href: GITHUB_REPO_URL,
+    icon: FolderGit2,
+    title: 'GitHub',
+    body: 'Source code and development history.',
+    external: true,
+  },
+  {
+    href: '#contracts',
+    icon: FileCode,
+    title: 'Contracts',
+    body: 'Verified deployed contracts on the active Base explorer.',
+    external: false,
+  },
+  {
+    href: ndrHref,
+    icon: Library,
+    title: 'Decision Records',
+    body: 'Why major protocol decisions were made.',
+    external: false,
+  },
+] as const;
+
+const ghostCtaClass =
+  'inline-block border border-white/85 px-5 py-3 text-[0.7rem] tracking-[0.22em] text-white uppercase';
+
+const toc = [
+  { href: '#overview', label: 'Nether in 30 seconds' },
+  { href: '#how-it-works', label: 'How it works' },
+  { href: '#reckoning', label: 'Reckoning' },
+  { href: '#neth', label: 'What is NETH?' },
+  { href: '#grave', label: 'The Grave' },
+  { href: '#reaper', label: 'The Reaper' },
+  { href: '#why-bury', label: 'Why bury ETH?' },
+  { href: '#value', label: 'Where NETH gets value' },
+  { href: '#backing', label: 'Is NETH backed by ETH?' },
+  { href: '#markets', label: 'Where NETH trades' },
+  { href: '#control', label: 'Who controls Nether?' },
+  { href: '#strategy-losses', label: 'Strategy losses' },
+  { href: '#allocation', label: 'Token allocation' },
+  { href: '#faq', label: 'FAQ' },
+  { href: '#risks', label: 'Risks' },
+  { href: '#verify', label: 'Verify it' },
+] as const;
+---
+
+<Layout title={title} description={description}>
+  <main class="learn-page">
+    <section class="learn-section learn-hero">
+      <p class="learn-kicker">Learn</p>
+      <h1 class="font-display text-[3.1rem] leading-none text-white md:text-6xl">Understand Nether</h1>
+      <p class="mt-5 max-w-2xl text-[1.05rem] leading-relaxed font-light text-paper md:text-[1.15rem]">
+        Bury ETH forever. Receive NETH. The Grave puts permanent capital to work, and what it earns
+        feeds the Reaper.
+      </p>
+      <nav class="learn-index" aria-label="On this page">
+        <p class="learn-index-label">On this page</p>
+        <ol>
+          {
+            toc.map((item) => (
+              <li>
+                <a href={item.href}>{item.label}</a>
+              </li>
+            ))
+          }
+        </ol>
+      </nav>
+      <Callout tone="warning">
+        <p>
+          <strong>Burial is irreversible.</strong> Once ETH enters the Grave, nobody can withdraw that
+          protected principal — including you, the team, or governance.
+        </p>
+      </Callout>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <GraveCta />
+        <a href={docsHref} class={ghostCtaClass}>Read the Technical Docs</a>
+      </div>
+    </section>
+
+    <section class="learn-section" id="overview">
+      <h2 class="learn-heading">Nether in 30 seconds</h2>
+      <div class="learn-prose">
+        <p>Nether is a permanently capitalized monetary protocol on Base.</p>
+        <p>
+          You bury ETH into the Grave and receive newly minted NETH according to the current era.
+        </p>
+        <p>
+          The buried ETH becomes permanent protocol capital. It cannot be redeemed by the person who
+          buried it, the team, governance, or the Reaper.
+        </p>
+        <p>
+          The Grave puts that capital into an ETH-denominated yield strategy. When the strategy
+          generates value above the protected principal, that harvestable yield is sent to the Reaper.
+        </p>
+        <p>
+          The Reaper uses this ETH to acquire NETH from willing sellers through a protocol-native
+          auction. Every NETH acquired by the Reaper is permanently burned.
+        </p>
+        <p>There is no ETH redemption mechanism, no NETH peg, and no guaranteed market price.</p>
+      </div>
+    </section>
+
+    <section class="learn-section" id="how-it-works">
+      <h2 class="learn-heading">How it works</h2>
+      <div class="mt-8 grid gap-4 md:grid-cols-2">
+        {
+          howItWorks.map((step) => {
+            const Icon = step.icon;
+            return (
+              <article class="learn-card">
+                <Icon class="h-7 w-7 text-accent" stroke-width={1.25} aria-hidden="true" />
+                <h3 class="mt-3 text-[0.7rem] tracking-[0.22em] text-accent uppercase">{step.title}</h3>
+                <p class="mt-2 text-[0.95rem] text-white">{step.lead}</p>
+                <p class="mt-2 text-sm leading-relaxed text-paper/90">{step.body}</p>
+              </article>
+            );
+          })
+        }
+      </div>
+    </section>
+
+    <section class="learn-section" id="reckoning">
+      <h2 class="learn-heading">Every Reckoning changes the burial rate</h2>
+      <div class="mt-8 overflow-x-auto">
+        <table class="learn-table">
+          <thead>
+            <tr>
+              <th>Era</th>
+              <th class="text-right">ETH capacity</th>
+              <th class="text-right">NETH per ETH</th>
+              <th class="text-right">Gross NETH if era fills</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              ERA_TABLE.map((row) => (
+                <tr>
+                  <td>{row.era}</td>
+                  <td class="text-right">{formatLearnNumber(row.ethCapacity)}</td>
+                  <td class="text-right">{formatLearnNumber(row.nethPerEth)}</td>
+                  <td class="text-right">{formatLearnNumber(row.grossNeth)}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-5 max-w-2xl text-sm leading-relaxed text-paper">
+        <strong>Each era requires twice as much ETH to produce the same 10 million gross NETH.</strong>
+      </p>
+      <div class="learn-prose mt-6">
+        <p>The burial rate is an issuance rule, not a market price.</p>
+        <p>
+          For example, “1 ETH produces 1,000,000 NETH” in Era 0 does <strong>not</strong> mean that
+          1,000,000 NETH is worth 1 ETH.
+        </p>
+        <p>
+          A single burial may cross an era boundary. In that case, each portion of the ETH receives
+          the rate of the era it belongs to.
+        </p>
+      </div>
+    </section>
+
+    <section class="learn-section" id="neth">
+      <h2 class="learn-heading">What is NETH?</h2>
+      <div class="learn-prose">
+        <p>NETH is Nether's ERC-20 monetary asset.</p>
+        <p>
+          New NETH can only be minted by the Grave when ETH is buried, according to the immutable era
+          schedule.
+        </p>
+        <p>
+          There is no team mint, admin mint, staking emission, transfer tax, rebasing mechanism, or
+          discretionary monetary issuance.
+        </p>
+        <p>
+          NETH has no fixed maximum supply expressed as a single hard cap. Each completed era creates
+          10 million gross NETH, while the Reaper permanently removes NETH from circulation through
+          burns.
+        </p>
+        <p>NETH is freely transferable like a normal ERC-20 token.</p>
+      </div>
+      <Callout>
+        <p>
+          <strong>NETH is not wrapped ETH.</strong> It is not redeemable 1:1 for ETH and does not
+          represent a claim on a specific amount of ETH inside the Grave.
+        </p>
+      </Callout>
+    </section>
+
+    <section class="learn-section" id="grave">
+      <h2 class="learn-heading">What happens to buried ETH?</h2>
+      <div class="learn-prose">
+        <p>Every ETH successfully buried becomes part of the Grave's protected principal.</p>
+        <p>Protected principal equals the cumulative amount of ETH buried and only increases.</p>
+        <p>The Grave may deploy this ETH into an approved ETH-denominated yield strategy.</p>
+        <p>
+          The strategy is allowed to generate yield, but it cannot change Nether's monetary rules or
+          use Grave capital for unrelated purposes.
+        </p>
+        <p>
+          If the live strategy loses value and its NAV falls below protected principal, the Reaper
+          receives nothing until that deficit has been recovered.
+        </p>
+        <p>Only value above protected principal can become harvestable yield.</p>
+      </div>
+      <Callout>
+        <p>
+          <strong>Strategy losses do not make buried ETH withdrawable. Burial remains permanent.</strong>
+        </p>
+      </Callout>
+    </section>
+
+    <section class="learn-section" id="reaper">
+      <h2 class="learn-heading">What is the Reaper?</h2>
+      <div class="learn-prose">
+        <p>The Reaper turns yield generated by the Grave into permanent demand for NETH.</p>
+        <p>When harvestable yield exists, it is transferred to the Reaper as ETH.</p>
+        <p>The Reaper then opens a seven-day reverse Dutch auction.</p>
+        <p>
+          NETH holders can choose to sell NETH directly to the Reaper in exchange for ETH from the
+          auction budget.
+        </p>
+        <p>
+          The exchange rate becomes progressively more favorable to NETH sellers during the auction,
+          but another seller may use the available ETH first.
+        </p>
+        <p>Every NETH acquired by the Reaper is immediately burned.</p>
+      </div>
+      <ul class="learn-facts">
+        <li>The Reaper does not trade directly on a DEX.</li>
+        <li>The Reaper does not use a NETH price oracle.</li>
+        <li>The Reaper does not maintain a peg.</li>
+        <li>The Reaper does not guarantee a minimum NETH price.</li>
+        <li>If there is no harvestable yield, there is no new Reaper budget.</li>
+      </ul>
+    </section>
+
+    <section class="learn-section" id="why-bury">
+      <h2 class="learn-heading">Why bury ETH instead of just holding it?</h2>
+      <div class="learn-prose">
+        <p>
+          Burying ETH is not equivalent to holding ETH and it should not be presented as a superior
+          version of holding ETH.
+        </p>
+        <p>
+          A user gives up ownership of the ETH permanently in exchange for NETH issued under the
+          current era's monetary rules.
+        </p>
+        <p>
+          The reason someone might choose to do this is exposure to Nether's monetary experiment:
+          permanent productive capital, progressively declining NETH issuance per ETH, and a
+          mechanism that directs future Grave yield toward acquiring and burning NETH.
+        </p>
+        <p>
+          Whether that trade is economically worthwhile depends on future demand for NETH, Grave
+          growth, strategy performance, market conditions, and many other factors.
+        </p>
+        <p>There is no guaranteed return.</p>
+      </div>
+    </section>
+
+    <section class="learn-section" id="value">
+      <h2 class="learn-heading">Where does NETH get its value?</h2>
+      <div class="learn-prose">
+        <p>Nether does not set a market price for NETH.</p>
+        <p>If NETH trades on an external market, its price is determined by buyers and sellers.</p>
+        <p>The protocol creates an economic feedback loop rather than a peg.</p>
+      </div>
+      <ol class="learn-loop">
+        <li>ETH enters the Grave permanently.</li>
+        <li>The Grave may generate yield.</li>
+        <li>Harvestable yield funds the Reaper.</li>
+        <li>The Reaper offers ETH to willing NETH sellers.</li>
+        <li>NETH acquired by the Reaper is burned.</li>
+      </ol>
+      <div class="learn-prose mt-6">
+        <p>
+          This mechanism can create demand for NETH, but it does not guarantee that demand will
+          exceed supply or that NETH will appreciate.
+        </p>
+      </div>
+      <Callout tone="warning">
+        <p>
+          <strong>NETH can lose substantial value, including potentially all of its market value.</strong>
+        </p>
+      </Callout>
+    </section>
+
+    <section class="learn-section" id="backing">
+      <h2 class="learn-heading">Is NETH backed by the ETH in the Grave?</h2>
+      <div class="learn-prose">
+        <p>Not in the conventional redeemable sense.</p>
+        <p>
+          The Grave contains protected ETH capital, but NETH holders do not have a contractual right
+          to redeem NETH for that ETH.
+        </p>
+        <p>
+          The ETH and NETH are connected through Nether's economic mechanism, not through a 1:1
+          redemption promise.
+        </p>
+        <p>Do not call NETH an ETH-backed token without this qualification.</p>
+      </div>
+    </section>
+
+    <section class="learn-section" id="markets">
+      <h2 class="learn-heading">Where does NETH trade?</h2>
+      <div class="learn-prose">
+        <p>A DEX market is not required for Nether itself to function.</p>
+        <p>
+          The Grave, issuance, harvesting, Reaper auctions, and burns operate independently of a DEX.
+        </p>
+        <p>
+          External parties may create NETH markets on Base venues such as Aerodrome or Uniswap. Those
+          markets are outside Nether's monetary core.
+        </p>
+        {
+          OFFICIAL_MARKETS.length === 0 ? (
+            <p>
+              No official NETH market is configured as a protocol dependency. None should be inferred
+              from this page.
+            </p>
+          ) : (
+            <ul>
+              {OFFICIAL_MARKETS.map((market) => (
+                <li>
+                  <a href={market.href} rel="noopener noreferrer" target="_blank">
+                    {market.name} on {market.venue}
+                    <span class="sr-only">, opens in a new tab</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </section>
+
+    <section class="learn-section" id="control">
+      <h2 class="learn-heading">Can the team change the rules?</h2>
+      <div class="learn-prose">
+        <p>The monetary core is designed to be immutable after deployment.</p>
+        <p>
+          The team/admin cannot change the era schedule, mint arbitrary NETH, change the Reaper
+          auction curve, withdraw protected principal, seize user NETH, or redirect Reaper ETH.
+        </p>
+        <p>NETH, the Grave, and the Reaper are non-proxy contracts.</p>
+        <p>The intentionally replaceable component is the Grave's investment strategy.</p>
+        <p>
+          Production administration is specified as a multisig-capable account rather than a single
+          deployer key. Replacing an already-active strategy requires a publicly scheduled 14-day
+          delay.
+        </p>
+      </div>
+      <div class="mt-8 grid gap-4 md:grid-cols-2">
+        <article class="learn-card">
+          <h3 class="text-[0.7rem] tracking-[0.22em] text-accent uppercase">Immutable</h3>
+          <p class="mt-3 text-sm leading-relaxed text-paper">
+            Monetary rules, burial finality, NETH issuance, Reaper economics, protected-principal
+            rule.
+          </p>
+        </article>
+        <article class="learn-card">
+          <h3 class="text-[0.7rem] tracking-[0.22em] text-accent uppercase">Replaceable</h3>
+          <p class="mt-3 text-sm leading-relaxed text-paper">
+            The investment strategy used by the Grave.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="learn-section" id="strategy-losses">
+      <h2 class="learn-heading">What if the Grave's strategy loses money?</h2>
+      <div class="learn-prose">
+        <p>The protocol tracks protected principal against the Grave's current strategy value.</p>
+        <p>
+          If the live strategy makes a small loss, harvestable yield becomes zero until that active
+          capital recovers. Future yield first repairs the deficit. Only value above the required
+          backing can later be sent to the Reaper.
+        </p>
+        <p>
+          If a strategy is replaced and the old adapter cannot return its ETH after three on-chain
+          retries, that leftover is marked impaired. The adapter stays listed as owing that ETH.
+          Anyone can try to recover it later. The Grave does not withhold new yield to refill that
+          lost amount, so the Reaper can still receive yield from remaining capital during a crisis.
+        </p>
+        <p>No additional NETH is minted to cover strategy losses.</p>
+        <p>
+          This accounting mechanism does not mean the strategy is risk-free. Smart-contract failures,
+          integrations, exploits, or severe strategy losses may still cause capital loss.
+        </p>
+      </div>
+    </section>
+
+    <section class="learn-section" id="allocation">
+      <h2 class="learn-heading">Did the team receive NETH?</h2>
+      <div class="learn-prose">
+        <p>Nether v1 has no team mint allocation and requires no founder burial.</p>
+        <p>At genesis, NETH supply begins at zero.</p>
+        <p>NETH enters circulation when users bury ETH.</p>
+      </div>
+    </section>
+
+    <section class="learn-section" id="faq" aria-labelledby="learn-faq">
+      <h2 id="learn-faq" class="learn-heading">FAQ</h2>
+      <div class="learn-faq mt-8">
+        <FaqItem question="Can I withdraw ETH after burying it?">
+          <p>No.</p>
+          <p>A successful burial is irreversible. The ETH becomes protected protocol capital permanently.</p>
+        </FaqItem>
+        <FaqItem question="Can the team withdraw my buried ETH?">
+          <p>No.</p>
+          <p>
+            The monetary specification prevents administrators, governance, the Reaper, and users from
+            withdrawing protected principal.
+          </p>
+        </FaqItem>
+        <FaqItem question="Can governance later enable withdrawals?">
+          <p>Not in Nether v1.</p>
+          <p>
+            The monetary contracts are non-proxy and the protected-principal rule is part of the
+            immutable monetary core.
+          </p>
+        </FaqItem>
+        <FaqItem question="Is NETH pegged to ETH?">
+          <p>No.</p>
+          <p>Nether does not target a fixed NETH/ETH price.</p>
+        </FaqItem>
+        <FaqItem question="Can I redeem NETH for ETH?">
+          <p>There is no general redemption mechanism.</p>
+          <p>
+            A NETH holder may potentially sell NETH to the Reaper while an auction has ETH available,
+            but this is an auction funded by Grave yield, not redemption of underlying principal.
+          </p>
+          <p>External markets may also exist independently.</p>
+        </FaqItem>
+        <FaqItem question="Does 1 ETH → 1,000,000 NETH mean 1,000,000 NETH is worth 1 ETH?">
+          <p>No.</p>
+          <p>That is the Era 0 issuance rate, not a market price, peg, redemption rate, or valuation.</p>
+        </FaqItem>
+        <FaqItem question="What happens when a Reckoning occurs?">
+          <p>The next era begins.</p>
+          <p>
+            The ETH capacity of the era doubles and the amount of NETH issued per ETH is cut in half.
+          </p>
+        </FaqItem>
+        <FaqItem question="Is there a maximum NETH supply?">
+          <p>There is no fixed maximum supply constant.</p>
+          <p>
+            Each fully completed era issues 10 million gross NETH, while Reaper burns reduce total
+            supply.
+          </p>
+        </FaqItem>
+        <FaqItem question="Where does Reaper ETH come from?">
+          <p>
+            From harvestable economic yield generated by the Grave's strategy above protected
+            principal.
+          </p>
+          <p>Protected principal itself cannot fund the Reaper.</p>
+        </FaqItem>
+        <FaqItem question="Does the Reaper buy NETH on a DEX?">
+          <p>No.</p>
+          <p>
+            It uses a protocol-native reverse Dutch auction where NETH holders can sell directly to
+            the Reaper.
+          </p>
+        </FaqItem>
+        <FaqItem question="Does the Reaper guarantee demand?">
+          <p>No.</p>
+          <p>
+            The Reaper can only spend ETH that has actually become available from harvestable yield.
+          </p>
+        </FaqItem>
+        <FaqItem question="Does the Reaper guarantee a price floor?">
+          <p>No.</p>
+          <p>There is no protocol price floor or peg.</p>
+        </FaqItem>
+        <FaqItem question="Can NETH go to zero?">
+          <p>Yes.</p>
+          <p>Nether does not guarantee a market value for NETH. Market demand may fail entirely.</p>
+        </FaqItem>
+        <FaqItem question="What happens if nobody wants NETH?">
+          <p>There is no mechanism forcing external buyers to value NETH.</p>
+          <p>
+            The Reaper may create protocol-funded demand when yield exists, but market demand remains
+            uncertain.
+          </p>
+        </FaqItem>
+        <FaqItem question="What happens if the Grave earns no yield?">
+          <p>
+            The protocol continues to exist, but no new harvestable ETH is generated for the Reaper.
+          </p>
+          <p>Burial and era issuance rules remain unchanged.</p>
+        </FaqItem>
+        <FaqItem question="What happens if the strategy loses money?">
+          <p>
+            If the live strategy is down, no yield is harvested until active capital recovers above
+            the required backing. Losses are not compensated by minting additional NETH.
+          </p>
+          <p>
+            If an old adapter cannot return ETH after three migration retries, that amount is marked
+            impaired and listed as owed by that adapter. Anyone may try to recover it later. New
+            yield on remaining capital is not withheld to refill that lost amount.
+          </p>
+        </FaqItem>
+        <FaqItem question="Can the team mint more NETH?">
+          <p>No.</p>
+          <p>
+            Only the immutable Grave contract can mint NETH, and only when ETH is buried according to
+            the era algorithm.
+          </p>
+        </FaqItem>
+        <FaqItem question="Can the team change the burial rate?">
+          <p>No.</p>
+          <p>Era capacity and reward progression belong to the immutable monetary core.</p>
+        </FaqItem>
+        <FaqItem question="Can the investment strategy change?">
+          <p>Yes.</p>
+          <p>
+            The strategy is intentionally replaceable for safety, deprecation, or improved
+            conservative ETH deployment.
+          </p>
+          <p>
+            Replacing an active strategy is subject to the protocol's strategy-change process and
+            14-day delay.
+          </p>
+        </FaqItem>
+        <FaqItem question="Can the team seize my NETH?">
+          <p>No.</p>
+          <p>The admin has no authority to seize user NETH.</p>
+        </FaqItem>
+        <FaqItem question="Is Nether audited?">
+          {
+            audited ? (
+              <>
+                <p>Independent production audit reports:</p>
+                <ul>
+                  {productionReports.map((report) => (
+                    <li>
+                      <a href={report.href} rel="noopener noreferrer" target="_blank">
+                        {report.title}
+                        <span class="sr-only">, opens in a new tab</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                {otherReports.length > 0 ? (
+                  <>
+                    <p>Informal or community review, not a production audit:</p>
+                    <ul>
+                      {otherReports.map((report) => (
+                        <li>
+                          <a href={report.href} rel="noopener noreferrer" target="_blank">
+                            {report.title}
+                            <span class="sr-only">, opens in a new tab</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <p>
+                <strong>
+                  Nether has not yet completed an independent production smart-contract audit. Treat
+                  the protocol as experimental and high risk.
+                </strong>
+              </p>
+            )
+          }
+        </FaqItem>
+        <FaqItem question="Is there a team or investor allocation?">
+          <p>Nether v1 has no team mint allocation.</p>
+        </FaqItem>
+        <FaqItem question="Is there a presale?">
+          {
+            HAS_PROTOCOL_PRESALE ? (
+              <p>A protocol presale is recorded in current project data.</p>
+            ) : (
+              <p>
+                There is no protocol presale. Nether v1 starts with zero NETH and issues NETH only
+                when users bury ETH.
+              </p>
+            )
+          }
+        </FaqItem>
+        <FaqItem question="Where can I verify the protocol?">
+          <ul>
+            <li>
+              Verified contracts on the relevant Base explorer, listed in
+              <a href="#contracts"> Contracts</a>.
+            </li>
+            <li>
+              The GitHub repository:
+              <a href={GITHUB_REPO_URL} rel="noopener noreferrer" target="_blank">
+                {GITHUB_REPO_URL}
+                <span class="sr-only">, opens in a new tab</span>
+              </a>
+            </li>
+            <li>
+              The full <a href={specHref}>Protocol Specification</a>.
+            </li>
+            <li>
+              The <a href={ndrHref}>Nether Decision Records</a>.
+            </li>
+            <li>
+              The <a href={nipHref}>implementation plans</a>.
+            </li>
+          </ul>
+        </FaqItem>
+      </div>
+    </section>
+
+    <section class="learn-section learn-risks" id="risks" aria-labelledby="learn-risks">
+      <h2 id="learn-risks" class="learn-heading">Understand the risks</h2>
+      <p class="mt-4 max-w-2xl text-sm leading-relaxed text-paper">
+        Nether is experimental monetary infrastructure and involves substantial risk.
+      </p>
+      <div class="mt-8 grid gap-4 md:grid-cols-2">
+        {
+          risks.map((risk) => (
+            <article class="learn-risk">
+              <h3>{risk.title}</h3>
+              <p>{risk.body}</p>
+            </article>
+          ))
+        }
+      </div>
+      <p class="learn-risk-end">Do not bury ETH you cannot afford to lose permanently.</p>
+    </section>
+
+    <section class="learn-section" id="verify" aria-labelledby="learn-verify">
+      <h2 id="learn-verify" class="learn-heading">Don't trust this page. Verify it.</h2>
+      <p class="mt-4 max-w-2xl text-sm leading-relaxed text-paper">
+        Nether is designed so its important monetary behavior can be verified independently.
+      </p>
+      <div class="mt-8 grid gap-4 md:grid-cols-2">
+        {
+          verifyCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <a
+                class="learn-card learn-card-link"
+                href={card.href}
+                rel={card.external ? 'noopener noreferrer' : undefined}
+                target={card.external ? '_blank' : undefined}
+              >
+                <Icon class="h-6 w-6 text-accent" stroke-width={1.25} aria-hidden="true" />
+                <h3 class="mt-3 text-[0.7rem] tracking-[0.22em] text-accent uppercase">
+                  {card.title}
+                  {card.external ? (
+                    <ExternalLink class="ml-1.5 inline h-3.5 w-3.5 align-[-0.1em]" stroke-width={1.5} />
+                  ) : null}
+                </h3>
+                <p class="mt-2 text-sm leading-relaxed text-paper/90">{card.body}</p>
+                {card.external ? <span class="sr-only">, opens in a new tab</span> : null}
+              </a>
+            );
+          })
+        }
+      </div>
+      <div class="mt-8" id="contracts">
+        <h3 class="text-[0.7rem] tracking-[0.22em] text-muted uppercase">Deployed contracts</h3>
+        <div class="mt-4">
+          <ContractDirectory />
+        </div>
+      </div>
+      <p class="mt-8">
+        <a href={docsHref} class="text-sm tracking-[0.08em] text-accent uppercase hover:text-white">
+          Read the technical docs →
+        </a>
+      </p>
+    </section>
+
+    <section class="learn-section learn-final" id="enter">
+      <h2 class="learn-heading">Ready to enter the Grave?</h2>
+      <p class="mt-4 max-w-xl text-sm leading-relaxed text-paper">
+        Understand the mechanism. Understand the risks. Then decide for yourself.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <GraveCta />
+        <a href={docsHref} class={ghostCtaClass}>Read the Docs</a>
+      </div>
+    </section>
+  </main>
+</Layout>

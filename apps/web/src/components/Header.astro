@@ -1,15 +1,19 @@
 ---
+import ExternalLink from '@lucide/astro/icons/external-link';
 import { GITHUB_REPO_URL, withBase } from '../lib/site';
 import { HeaderActions } from './HeaderActions.tsx';
 import { MobileChrome } from './MobileChrome.tsx';
 
 const homeHref = withBase();
-const graveHref = withBase('grave');
+const learnHref = withBase('learn');
+const appHref = withBase('grave');
 const docsHref = withBase('docs');
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
-const gravePath = graveHref.replace(/\/+$/, '');
+const learnPath = learnHref.replace(/\/+$/, '');
+const appPath = appHref.replace(/\/+$/, '');
 const docsPath = docsHref.replace(/\/+$/, '');
-const onGrave = path === gravePath || path.startsWith(`${gravePath}/`);
+const onLearn = path === learnPath || path.startsWith(`${learnPath}/`);
+const onApp = path === appPath || path.startsWith(`${appPath}/`);
 const onDocs = path === docsPath || path.startsWith(`${docsPath}/`);
 
 function tabClass(active: boolean): string {
@@ -22,8 +26,11 @@ function tabClass(active: boolean): string {
 <header class="relative z-50 grid shrink-0 grid-cols-[1fr_auto] items-center gap-3 bg-black px-5 py-3 md:grid-cols-[1fr_auto_1fr] md:bg-transparent md:px-10 md:py-3.5">
   <a href={homeHref} class="font-display text-xl text-white md:text-2xl">Nether</a>
   <nav class="hidden items-center gap-6 justify-self-center md:flex" aria-label="Primary">
-    <a href={graveHref} class={tabClass(onGrave)} aria-current={onGrave ? 'page' : undefined}>
-      Grave
+    <a href={learnHref} class={tabClass(onLearn)} aria-current={onLearn ? 'page' : undefined}>
+      Learn
+    </a>
+    <a href={appHref} class={tabClass(onApp)} aria-current={onApp ? 'page' : undefined}>
+      App
     </a>
     <a href={docsHref} class={tabClass(onDocs)} aria-current={onDocs ? 'page' : undefined}>
       Docs
@@ -32,9 +39,11 @@ function tabClass(active: boolean): string {
       href={GITHUB_REPO_URL}
       rel="noopener noreferrer"
       target="_blank"
-      class="text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]"
+      class="inline-flex items-center gap-1 text-[0.65rem] font-normal tracking-[0.28em] text-white uppercase md:text-[0.7rem]"
     >
-      Source
+      GitHub
+      <ExternalLink class="h-3 w-3 text-accent" stroke-width={1.5} aria-hidden="true" />
+      <span class="sr-only">(opens in a new tab)</span>
     </a>
   </nav>
   <div class="hidden justify-self-end md:block">
@@ -43,12 +52,14 @@ function tabClass(active: boolean): string {
   <div class="justify-self-end md:hidden">
     <MobileChrome
       client:load
-      graveHref={graveHref}
+      learnHref={learnHref}
+      appHref={appHref}
       docsHref={docsHref}
-      sourceHref={GITHUB_REPO_URL}
-      onGrave={onGrave}
+      githubHref={GITHUB_REPO_URL}
+      onLearn={onLearn}
+      onApp={onApp}
       onDocs={onDocs}
-      showConnect={!onGrave}
+      showConnect={!onApp}
     />
   </div>
 </header>
