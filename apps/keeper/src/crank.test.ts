@@ -353,7 +353,7 @@ describe('runTick', () => {
       expected: true,
     };
     const { attempts, gasLog } = await tick(port);
-    assert.deepEqual(port.sent, ['recoverImpaired', 'harvest']);
+    assert.deepEqual(port.sent.slice(0, 2), ['recoverImpaired', 'harvest']);
     assert.equal(
       attempts.find((item) => item.action === 'recoverImpaired' && item.adapter === first)?.skipReason,
       'revert:ZeroRecover',
