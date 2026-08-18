@@ -1,4 +1,4 @@
-import { BookOpen, Github, GraduationCap, Landmark } from 'lucide-react';
+import { BookOpen, Code2, GraduationCap, Landmark } from 'lucide-react';
 import { GITHUB_REPO_URL, withBase } from '../../lib/site.ts';
 import { ConnectButton } from '../wallet/ConnectButton.tsx';
 
@@ -10,7 +10,7 @@ export function MobileDock() {
     { href: learnHref, label: 'Learn', icon: GraduationCap, current: false },
     { href: appHref, label: 'App', icon: Landmark, current: true },
     { href: docsHref, label: 'Docs', icon: BookOpen, current: false },
-    { href: GITHUB_REPO_URL, label: 'GitHub', icon: Github, current: false, external: true },
+    { href: GITHUB_REPO_URL, label: 'GitHub', icon: Code2, current: false, external: true },
   ] as const;
 
   return (
